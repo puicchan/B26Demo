@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Assessment - ZavaBatchScheduler</title>
+<style>
+:root {
+  --bg-primary: #ffffff;
+  --bg-card: #f8f9fa;
+  --bg-page: #f0f1f3;
+  --text-primary: #24292f;
+  --text-secondary: #57606a;
+  --text-muted: #6b7280;
+  --border-color: #d0d7de;
+  --border-light: #e1e4e8;
+  --link-color: #2563eb;
+  --color-mandatory: #E3008C;
+  --color-potential: #637CEF;
+  --color-optional: #A19F9D;
+  --font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+  --font-mono: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-family); font-size: 13px; color: var(--text-primary); background: var(--bg-primary); line-height: 1.5; margin: 0; padding: 0; }
+a { color: var(--link-color); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Page layout ───────────────────────────────────────────── */
+.main { margin: 0; padding: 24px 32px; background: var(--bg-primary); }
+.back-link { color: var(--text-muted); font-size: 13px; margin-bottom: 16px; display: block; }
+h1 { font-weight: 600; font-size: 20px; color: var(--text-primary); margin-bottom: 20px; }
+
+/* ── Report cards (matches VS Code .vscode-report-card) ──── */
+.report-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 4px; padding: 12px; margin-bottom: 20px; }
+.report-card h2 { font-size: 14px; font-weight: 600; margin: 0; color: var(--text-primary); }
+.report-card-body { margin-top: 16px; }
+
+/* ── Component Information (two-column) ────────────────── */
+.app-info-container { display: flex; gap: 8px; flex-wrap: wrap; }
+.app-info-column { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 8px; }
+.app-info-row { display: flex; align-items: baseline; }
+.app-info-label { width: 136px; flex-shrink: 0; font-weight: 600; color: var(--text-primary); }
+.app-info-value { flex: 1; color: var(--text-primary); }
+
+/* ── Issue Summary (pie charts + legend) ─────────────────── */
+.cards-container { display: flex; align-items: stretch; gap: 20px; flex-wrap: wrap; }
+.issue-summary-card { flex: 2; }
+.domain-summary-container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-around; }
+.domain-summary-item { flex: 1; min-width: 120px; text-align: center; padding: 0 16px; border-right: 1px solid var(--border-light); }
+.domain-summary-item:last-child { border-right: none; }
+.domain-summary-item h3 { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-top: 8px; }
+.domain-summary-item .count { font-size: 12px; color: var(--text-secondary); }
+.criticality-legend { display: flex; flex-wrap: wrap; gap: 15px; padding-top: 12px; justify-content: center; }
+.criticality-legend .legend-item { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-secondary); }
+.legend-swatch { display: inline-block; width: 1em; height: 1em; border-radius: 2px; }
+
+/* ── Issue list tables ───────────────────────────────────── */
+.issue-section { margin-top: 20px; }
+.issue-section h2 { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+.issue-table { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 600px; }
+.issue-table th { text-align: left; text-transform: uppercase; font-weight: 600; font-size: calc(13px * 0.875); padding: 6px 8px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); color: var(--text-secondary); position: sticky; top: 0; z-index: 1; }
+.issue-table td { padding: 12px 8px; border-bottom: 1px solid var(--border-light); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+.col-issue { width: 55%; }
+.col-criticality { width: 25%; }
+.col-storypoint { width: 20%; }
+
+/* ── Target dropdown ─────────────────────────────────────── */
+.target-select-container { margin: 4px 0 16px 0; display: flex; align-items: center; gap: 8px; }
+.target-select-container label { font-weight: 600; color: var(--text-primary); font-size: 14px; }
+.target-select-container select { font-family: var(--font-family); font-size: 13px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-primary); color: var(--text-primary); cursor: pointer; }
+
+/* ── Filter bar ──────────────────────────────────────────── */
+.filter-bar { display: flex; flex-wrap: wrap; gap: 16px; margin: 16px 0 8px 0; align-items: center; }
+.multi-select { position: relative; display: inline-block; min-width: 140px; }
+.multi-select-btn { font-family: var(--font-family); font-size: 13px; padding: 4px 24px 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-primary); color: var(--text-primary); cursor: pointer; width: 100%; text-align: left; position: relative; white-space: nowrap; }
+.multi-select-btn::after { content: '\25BE'; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 11px; color: var(--text-secondary); }
+.multi-select-dropdown { display: none; position: absolute; top: 100%; left: 0; min-width: 100%; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 100; margin-top: 2px; }
+.multi-select.open .multi-select-dropdown { display: block; }
+.multi-select-option { display: flex; align-items: center; gap: 6px; padding: 5px 10px; cursor: pointer; font-size: 13px; white-space: nowrap; }
+.multi-select-option:hover { background: var(--bg-secondary); }
+.multi-select-option input[type=checkbox] { margin: 0; cursor: pointer; }
+.clear-filters { font-size: 12px; color: var(--link-color); cursor: pointer; margin-left: 4px; }
+
+/* ── Criticality labels (colored square + text) ──────────── */
+.crit-label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; }
+.crit-square { display: inline-block; width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.crit-square-mandatory { background: var(--color-mandatory); }
+.crit-square-potential { background: var(--color-potential); }
+.crit-square-optional { background: var(--color-optional); }
+
+/* ── Expandable rows ─────────────────────────────────────── */
+.expand-btn { background: none; border: none; cursor: pointer; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 11px; transition: transform 0.15s; padding: 0; vertical-align: middle; flex-shrink: 0; }
+.expand-btn.open { transform: rotate(90deg); }
+.issue-title-cell { display: flex; align-items: center; gap: 4px; }
+.detail-row td { padding: 0; border-bottom: 1px solid var(--border-light); white-space: normal; overflow: visible; text-overflow: clip; }
+.detail-content { display: flex; gap: 0; padding: 8px 8px 8px 32px; min-width: 0; }
+.file-list { flex: 0 0 50%; min-width: 0; overflow: hidden; }
+.file-list table { width: 100%; border-collapse: collapse; }
+.file-list th { font-size: calc(13px * 0.875); text-transform: uppercase; font-weight: 600; color: var(--text-secondary); padding: 6px 8px; border-bottom: 1px solid var(--border-color); text-align: left; height: 32px; }
+.file-list td { font-size: 13px; padding: 6px 8px; border-bottom: 1px solid var(--border-light); color: var(--text-primary); }
+.file-list .file-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px; display: block; }
+.file-list .position { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); }
+.explanation-panel { flex: 1; padding-left: 16px; min-width: 0; overflow-wrap: break-word; word-wrap: break-word; }
+.explanation-panel h4 { font-size: calc(13px * 0.875); text-transform: uppercase; font-weight: 600; color: var(--text-secondary); padding: 6px 0; border-bottom: 1px solid var(--border-color); height: 32px; margin: 0; }
+.explanation-panel p { font-size: 13px; padding: 8px 0; color: var(--text-primary); line-height: 1.6; white-space: normal; word-break: break-word; }
+
+/* ── Experimental badge ──────────────────────────────────── */
+.badge-experimental { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: #fef9c3; color: #854d0e; vertical-align: middle; margin-left: 8px; cursor: default; }
+
+/* ── Footer ──────────────────────────────────────────────── */
+.footer { text-align: center; margin-top: 24px; color: var(--text-muted); font-size: 13px; }
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 800px) {
+  .main { padding: 16px; }
+  .app-info-container { flex-direction: column; }
+  .domain-summary-container { flex-direction: column; }
+  .domain-summary-item { border-right: none; border-bottom: 1px solid var(--border-light); padding-bottom: 12px; }
+  .detail-content { flex-direction: column; }
+  .file-list { flex: none; width: 100%; }
+  .explanation-panel { padding-left: 0; padding-top: 8px; }
+}
+/* ── Tab navigation ──────────────────────────────────────── */
+.tab-nav { display: flex; gap: 0; border-bottom: 1px solid var(--border-color); margin-bottom: 28px; flex-wrap: wrap; }
+.tab-btn { background: none; border: none; border-bottom: 2px solid transparent; padding: 10px 18px; font-size: 13px; font-family: var(--font-family); color: var(--text-secondary); cursor: pointer; margin-bottom: -1px; white-space: nowrap; position: relative; }
+.tab-btn:hover { color: var(--text-primary); }
+.tab-btn.active { color: var(--link-color); border-bottom-color: var(--link-color); font-weight: 600; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── Tooltip on tab ──────────────────────────────────────── */
+.tab-btn[data-tooltip]::after { content: attr(data-tooltip); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: #24292f; color: #ffffff; font-size: 12px; font-weight: 400; padding: 6px 10px; border-radius: 4px; white-space: normal; width: max-content; max-width: 260px; text-align: center; pointer-events: none; opacity: 0; transition: opacity 0.15s; z-index: 100; }
+.tab-btn[data-tooltip]:hover::after { opacity: 1; }
+
+/* ── Fact content — prose column ─────────────────────────── */
+.fact-content { max-width: 860px; margin: 0 auto; line-height: 1.75; color: var(--text-primary); font-size: 14px; }
+.fact-content h1 { font-size: 22px; font-weight: 700; margin: 0 0 6px 0; color: var(--text-primary); letter-spacing: -0.01em; }
+.fact-content h1 + p { margin-top: 6px; color: var(--text-secondary); font-size: 14px; margin-bottom: 24px; }
+.fact-content h2 { font-size: 17px; font-weight: 700; margin: 36px 0 12px 0; padding-bottom: 6px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); letter-spacing: -0.01em; }
+.fact-content h3 { font-size: 14px; font-weight: 700; margin: 24px 0 8px 0; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; color: var(--text-secondary); }
+.fact-content p { margin: 10px 0; color: var(--text-primary); }
+.fact-content ul, .fact-content ol { margin: 10px 0 10px 22px; }
+.fact-content li { margin: 5px 0; }
+.fact-content a { color: var(--link-color); }
+.fact-content a:hover { text-decoration: underline; }
+
+/* ── Fact tables ─────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; margin: 16px 0; }
+.fact-content table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 13px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color); }
+.fact-content thead { background: var(--bg-card); }
+.fact-content th { text-align: left; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; padding: 8px 14px; border-bottom: 1px solid var(--border-color); color: var(--text-secondary); }
+.fact-content td { padding: 9px 14px; border-bottom: 1px solid var(--border-light); vertical-align: top; color: var(--text-primary); }
+.fact-content tr:last-child td { border-bottom: none; }
+.fact-content tbody tr:hover { background: #f6f8fa; }
+
+/* ── Fact code ───────────────────────────────────────────── */
+.fact-content code { font-family: var(--font-mono); font-size: 12px; background: #f0f1f3; padding: 2px 6px; border-radius: 4px; color: #c7254e; }
+.fact-content pre { background: #f6f8fa; border: 1px solid var(--border-light); border-radius: 6px; padding: 14px 16px; overflow-x: auto; margin: 14px 0; }
+.fact-content pre code { background: none; color: var(--text-primary); padding: 0; border-radius: 0; }
+.fact-content hr { border: none; border-top: 1px solid var(--border-light); margin: 28px 0; }
+.fact-content strong { font-weight: 600; }
+.fact-content em { font-style: italic; }
+.fact-content blockquote { border-left: 3px solid var(--border-color); margin: 12px 0; padding: 4px 16px; color: var(--text-secondary); }
+.fact-unavailable { padding: 32px 0; }
+.fact-unavailable h3 { font-size: 16px; font-weight: 600; color: var(--text-primary); text-transform: none; letter-spacing: 0; margin: 0 0 12px 0; }
+.fact-unavailable p { margin: 0 0 8px 0; color: var(--text-secondary); }
+.fact-unavailable ol, .fact-unavailable ul { margin: 0 0 0 22px; color: var(--text-primary); }
+.fact-unavailable li { margin: 6px 0; }
+
+/* ── Mermaid diagram card ─────────────────────────────────── */
+.mermaid { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 8px; padding: 24px 16px; margin: 20px 0; overflow-x: auto; text-align: center; cursor: pointer; position: relative; }
+.mermaid:hover { border-color: var(--border-color); }
+.mermaid svg { max-width: 100%; height: auto !important; display: inline-block; }
+.mermaid-zoom-hint { position: absolute; top: 8px; right: 10px; font-size: 11px; color: var(--text-muted); opacity: 0; transition: opacity 0.15s; pointer-events: none; }
+.mermaid:hover .mermaid-zoom-hint { opacity: 1; }
+
+/* ── Diagram lightbox ────────────────────────────────────── */
+.diagram-lightbox { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.7); backdrop-filter: blur(2px); align-items: center; justify-content: center; cursor: zoom-out; padding: 48px 32px; }
+.diagram-lightbox.open { display: flex; }
+.diagram-lightbox-inner { background: #ffffff; border-radius: 10px; padding: 32px; width: 88vw; max-height: 88vh; overflow: hidden; cursor: default; box-shadow: 0 24px 64px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; }
+.diagram-lightbox-inner svg { width: 100% !important; height: auto !important; max-height: 76vh; display: block; }
+.diagram-lightbox-close { position: fixed; top: 20px; right: 24px; background: #ffffff; border: none; border-radius: 50%; width: 36px; height: 36px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-primary); box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 1001; }
+.diagram-lightbox-close:hover { background: var(--bg-card); }
+.diagram-lightbox-hint { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.55); color: #ffffff; font-size: 12px; padding: 6px 14px; border-radius: 20px; pointer-events: none; white-space: nowrap; z-index: 1001; }
+</style>
+<script>
+window.__mermaidPending = [];
+window.__mermaidReady = false;
+window.__renderMermaidIn = function(container) {
+  // Until the real implementation overrides this (after the ES module import
+  // resolves), just queue the container so we can render it later.
+  if (container) { window.__mermaidPending.push(container); }
+};
+</script>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+mermaid.initialize({ startOnLoad: false, theme: 'default', flowchart: { useMaxWidth: true }, sequence: { useMaxWidth: true } });
+
+// Real implementation: actually run mermaid on the unprocessed diagrams in the
+// given container (only ones not already rendered). Adds a "Click to expand"
+// hint span after each successful render so the lightbox affordance is
+// discoverable.
+window.__renderMermaidIn = function(container) {
+  var nodes = container ? container.querySelectorAll('.mermaid:not([data-processed])') : [];
+  if (nodes.length > 0) {
+    mermaid.run({ nodes: Array.from(nodes) }).then(function() {
+      nodes.forEach(function(node) {
+        if (!node.querySelector('.mermaid-zoom-hint')) {
+          var hint = document.createElement('span');
+          hint.className = 'mermaid-zoom-hint';
+          hint.textContent = 'Click to expand';
+          node.appendChild(hint);
+        }
+      });
+    });
+  }
+};
+
+// Drain any containers that were queued by the shim while mermaid was loading.
+// Use a Set to dedupe in case a container was both queued and is also the
+// initial-active panel below.
+var drained = new Set();
+(window.__mermaidPending || []).forEach(function(c) {
+  if (!drained.has(c)) { drained.add(c); window.__renderMermaidIn(c); }
+});
+window.__mermaidPending = [];
+window.__mermaidReady = true;
+
+// Render diagrams visible on initial load (the active tab panel(s) may not have
+// been queued by anyone — DOMContentLoaded handlers run before this if the
+// module is cached, after this if it's not, so handle both cases here).
+function renderActivePanels() {
+  document.querySelectorAll('.tab-panel.active').forEach(function(p) {
+    if (!drained.has(p)) { drained.add(p); window.__renderMermaidIn(p); }
+  });
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', renderActivePanels);
+} else {
+  renderActivePanels();
+}
+</script>
+</head><body>
+<div id="diagram-lightbox" class="diagram-lightbox" role="dialog" aria-modal="true">
+  <button class="diagram-lightbox-close" id="diagram-lightbox-close" aria-label="Close">&#x2715;</button>
+  <div class="diagram-lightbox-hint">Scroll to zoom &nbsp;·&nbsp; Drag to pan &nbsp;·&nbsp; Double-click to reset</div>
+  <div class="diagram-lightbox-inner" id="diagram-lightbox-inner"></div>
+</div>
+<div class="main">
+<a class="back-link" href="../../index.html">&#8592; Back to aggregate dashboard</a>
+<h1>ZavaBatchScheduler</h1>
+<div class="report-card">
+  <h2>Component Information</h2>
+  <div class="report-card-body">
+    <div class="app-info-container">
+      <div class="app-info-column">
+        <div class="app-info-row"><span class="app-info-label">Component Name</span><span class="app-info-value">ZavaBatchScheduler</span></div>
+        <div class="app-info-row"><span class="app-info-label">Repository</span><span class="app-info-value">ZavaBatchScheduler</span></div>
+        <div class="app-info-row"><span class="app-info-label">Application</span><span class="app-info-value">ZavaBatchScheduler</span></div>
+      </div>
+      <div class="app-info-column">
+        <div class="app-info-row"><span class="app-info-label">Java Version</span><span class="app-info-value">1.8</span></div>
+        <div class="app-info-row"><span class="app-info-label">Effort</span><span class="app-info-value" id="effort-display">S (total story points: 19)</span></div>
+        <div class="app-info-row"><span class="app-info-label">Build Tools</span><span class="app-info-value">Gradle</span></div>
+        <div class="app-info-row"><span class="app-info-label">Frameworks</span><span class="app-info-value">N/A</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<nav class="tab-nav">
+  <button class="tab-btn active" data-tab="tab-issues" data-tooltip="Issues detected in the source code">Issues</button>
+  <button class="tab-btn" data-tab="tab-arch" data-tooltip="How the app&#39;s layers connect — from UI to data.">Architecture</button>
+  <button class="tab-btn" data-tab="tab-api" data-tooltip="Endpoints exposed by this app and how services communicate.">API Contracts</button>
+  <button class="tab-btn" data-tab="tab-config" data-tooltip="Environment settings, runtime profiles, and deployment manifests.">Configuration</button>
+  <button class="tab-btn" data-tab="tab-workflows" data-tooltip="Domain entities and the core flows users move through.">Business Workflows</button>
+  <button class="tab-btn" data-tab="tab-deps" data-tooltip="Libraries and frameworks this app depends on, grouped by category.">Dependencies</button>
+  <button class="tab-btn" data-tab="tab-data" data-tooltip="Database schema, entity relationships, and persistence behavior.">Data Model</button>
+</nav>
+<div id="tab-issues" class="tab-panel active">
+<div class="target-select-container">
+  <label for="target-select">Target Compute Service:</label>
+  <select id="target-select" onchange="onTargetChange(this.value)">
+    <option value="azure-aks">Azure Kubernetes Service</option>
+    <option value="azure-appservice">Azure App Service</option>
+    <option value="azure-container-apps">Azure Container Apps</option>
+  </select>
+</div>
+<div class="report-card">
+  <h2>Issue Summary</h2>
+  <div class="report-card-body">
+    <div class="domain-summary-container" id="donut-container">
+      <div class="domain-summary-item">
+<svg viewBox="0 0 100 100" width="100" height="100" style="display:block;margin:0 auto;transform:rotate(-90deg);">
+  <circle cx="50" cy="50" r="35" fill="none" stroke="var(--color-mandatory)" stroke-width="15" stroke-dasharray="71.80 219.91" stroke-dashoffset="-0.00"/>
+  <circle cx="50" cy="50" r="35" fill="none" stroke="var(--color-potential)" stroke-width="15" stroke-dasharray="71.80 219.91" stroke-dashoffset="-73.30"/>
+  <circle cx="50" cy="50" r="35" fill="none" stroke="var(--color-optional)" stroke-width="15" stroke-dasharray="71.80 219.91" stroke-dashoffset="-146.61"/>
+</svg>
+
+        <h3>Cloud Readiness</h3>
+        <div class="count">3 issues</div>
+      </div>
+      <div class="domain-summary-item">
+<svg viewBox="0 0 100 100" width="100" height="100" style="display:block;margin:0 auto;transform:rotate(-90deg);">
+  <circle cx="50" cy="50" r="35" fill="none" stroke="var(--color-mandatory)" stroke-width="15" stroke-dasharray="219.91 219.91" stroke-dashoffset="-0.00"/>
+</svg>
+
+        <h3>Java Upgrade</h3>
+        <div class="count">1 issue</div>
+      </div>
+    </div>
+    <div class="criticality-legend">
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--color-mandatory)"></span>Mandatory</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--color-potential)"></span>Potential</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--color-optional)"></span>Optional</div>
+    </div>
+  </div>
+</div>
+<div class="filter-bar" id="filter-bar">
+  <div class="multi-select" id="domain-ms">
+    <button class="multi-select-btn" onclick="toggleMultiSelect('domain-ms')">Domain</button>
+    <div class="multi-select-dropdown">
+      <label class="multi-select-option"><input type="checkbox" value="cloud-readiness" onchange="onMultiSelectChange('domain-ms','Domain')"/> Cloud Readiness</label>
+      <label class="multi-select-option"><input type="checkbox" value="java-upgrade" onchange="onMultiSelectChange('domain-ms','Domain')"/> Java Upgrade</label>
+    </div>
+  </div>
+  <div class="multi-select" id="criticality-ms">
+    <button class="multi-select-btn" onclick="toggleMultiSelect('criticality-ms')">Criticality</button>
+    <div class="multi-select-dropdown">
+      <label class="multi-select-option"><input type="checkbox" value="mandatory" onchange="onMultiSelectChange('criticality-ms','Criticality')"/> Mandatory</label>
+      <label class="multi-select-option"><input type="checkbox" value="potential" onchange="onMultiSelectChange('criticality-ms','Criticality')"/> Potential</label>
+      <label class="multi-select-option"><input type="checkbox" value="optional" onchange="onMultiSelectChange('criticality-ms','Criticality')"/> Optional</label>
+    </div>
+  </div>
+  <a class="clear-filters" href="javascript:void(0)" onclick="clearAllFilters()">Clear all</a>
+</div>
+<div class="issue-section" data-domain="cloud-readiness">
+  <h2>Cloud Readiness</h2>
+  <table class="issue-table">
+    <colgroup><col class="col-issue"/><col class="col-criticality"/><col class="col-storypoint"/></colgroup>
+    <thead><tr><th>Issue Category</th><th>Criticality</th><th>Story Point</th></tr></thead>
+    <tbody>
+    <tr class="issue-row" data-criticality="mandatory" data-targets='{"azure-aks":{"effort":3,"severity":"mandatory"},"azure-appservice":{"effort":3,"severity":"mandatory"},"azure-container-apps":{"effort":3,"severity":"mandatory"}}' data-default-effort="3" data-default-severity="mandatory" data-rule="unsecure-network-protocol-00000" onclick="toggleRow('row-cloudreadiness-0', this)" style="cursor:pointer;">
+      <td style="white-space:normal;"><div class="issue-title-cell"><button class="expand-btn" id="btn-row-cloudreadiness-0">&#x276F;</button> Use of unsecured network protocols or URI libraries</div></td>
+      <td class="crit-cell"><span class="crit-label"><span class="crit-square crit-square-mandatory"></span>Mandatory</span></td>
+      <td class="sp-cell">3</td>
+    </tr>
+    <tr class="detail-row" id="row-cloudreadiness-0" style="display:none;">
+      <td colspan="3">
+        <div class="detail-content">
+          <div class="file-list">
+            <table><colgroup><col style="width:70%"/><col style="width:30%"/></colgroup>
+            <thead><tr><th>File</th><th>Position</th></tr></thead><tbody>
+            <tr><td><span class="file-path" title="src/main/resources/batchscheduler.properties">src/main/resources/batchscheduler.properties</span></td><td><span class="position">Line 4, Col 0</span></td></tr>
+            <tr><td><span class="file-path" title="src/main/resources/batchscheduler.properties">src/main/resources/batchscheduler.properties</span></td><td><span class="position">Line 7, Col 0</span></td></tr>
+            <tr><td><span class="file-path" title="src/main/resources/batchscheduler.properties">src/main/resources/batchscheduler.properties</span></td><td><span class="position">Line 10, Col 0</span></td></tr>
+            <tr><td><span class="file-path" title="bin/main/batchscheduler.properties">bin/main/batchscheduler.properties</span></td><td><span class="position">Line 4, Col 0</span></td></tr>
+            <tr><td><span class="file-path" title="bin/main/batchscheduler.properties">bin/main/batchscheduler.properties</span></td><td><span class="position">Line 7, Col 0</span></td></tr>
+            <tr><td><span class="file-path" title="bin/main/batchscheduler.properties">bin/main/batchscheduler.properties</span></td><td><span class="position">Line 10, Col 0</span></td></tr>
+            </tbody></table>
+          </div>
+          <div class="explanation-panel">
+            <h4>Explanation</h4>
+            <div><p>Using secured protocols such as HTTPS and SFTP (over HTTP and FTP) should now be the norm as applications are more and more exposed and interconnected. <br/>This CloudReady patterns looks for unescured URI in the source code or deprecated URI libraries. <br/>Ideally, URLs should be replaced in your source code by secured protocols HTTPS and SFTP (and ensure the infrastructure implements these protocols for the resources your application calls, uses or references).</p></div>
+          </div>
+        </div>
+      </td>
+    </tr>
+    <tr class="issue-row" data-criticality="potential" data-targets='{"azure-aks":{"effort":5,"severity":"potential"},"azure-appservice":{"effort":5,"severity":"potential"},"azure-container-apps":{"effort":5,"severity":"potential"}}' data-default-effort="5" data-default-severity="potential" data-rule="azure-database-microsoft-sql-03000" onclick="toggleRow('row-cloudreadiness-1', this)" style="cursor:pointer;">
+      <td style="white-space:normal;"><div class="issue-title-cell"><button class="expand-btn" id="btn-row-cloudreadiness-1">&#x276F;</button> Microsoft SQL database found</div></td>
+      <td class="crit-cell"><span class="crit-label"><span class="crit-square crit-square-potential"></span>Potential</span></td>
+      <td class="sp-cell">5</td>
+    </tr>
+    <tr class="detail-row" id="row-cloudreadiness-1" style="display:none;">
+      <td colspan="3">
+        <div class="detail-content">
+          <div class="file-list">
+            <table><colgroup><col style="width:70%"/><col style="width:30%"/></colgroup>
+            <thead><tr><th>File</th><th>Position</th></tr></thead><tbody>
+            <tr><td><span class="file-path" title="src/main/resources/batchscheduler.properties">src/main/resources/batchscheduler.properties</span></td><td><span class="position">Line 13, Col 0</span></td></tr>
+            <tr><td><span class="file-path" title="bin/main/batchscheduler.properties">bin/main/batchscheduler.properties</span></td><td><span class="position">Line 13, Col 0</span></td></tr>
+            </tbody></table>
+          </div>
+          <div class="explanation-panel">
+            <h4>Explanation</h4>
+            <div><p>To migrate a Java application that uses a Microsoft SQL database to Azure, you can follow these recommendations:</p><p> * Use a managed <strong>Azure SQL</strong>: For that create a managed Azure SQL database in Azure and choose the appropriate pricing tier based on your application&#39;s requirements for performance, storage, and availability.</p><p> * <strong>Migrate</strong> the existing Microsoft SQL database: For that you can use the Azure Database Migration Service (DMS) to perform an online migration with minimal downtime.</p><p> * Update the application&#39;s <strong>database connection</strong> details: Modify the Java application&#39;s configuration to point to the newly provisioned Azure SQL. Update the connection string, hostname, port, username, and password information accordingly.</p><p> * Enable <strong>monitoring and diagnostics</strong>: Utilize Azure Monitor to gain insights into the performance and health of your Java application and the underlying Azure SQL database. Set up metrics, alerts, and log analytics to proactively identify and resolve issues.</p><p> * Implement <strong>security</strong> measures: Apply security best practices to protect your Java application and the Azure SQL database. This includes implementing authentication and authorization mechanisms with passwordless connections and leveraging Microsoft Defender for Cloud for threat detection and vulnerability assessments.</p><p> * <strong>Backup</strong> your data: Azure SQL provides automated backups by default. You can configure the retention period for backups based on your requirements. You can also enable geo-redundant backups, if needed, to enhance data durability and availability.</p></div>
+          </div>
+        </div>
+      </td>
+    </tr>
+    <tr class="issue-row" data-criticality="optional" data-targets='{"azure-aks":{"effort":3,"severity":"optional"},"azure-appservice":{"effort":3,"severity":"optional"},"azure-container-apps":{"effort":3,"severity":"optional"}}' data-default-effort="3" data-default-severity="optional" data-rule="hardcoded-urls-00001" onclick="toggleRow('row-cloudreadiness-2', this)" style="cursor:pointer;">
+      <td style="white-space:normal;"><div class="issue-title-cell"><button class="expand-btn" id="btn-row-cloudreadiness-2">&#x276F;</button> Avoid using hardcoded URLs (HTTP protocol) in source code</div></td>
+      <td class="crit-cell"><span class="crit-label"><span class="crit-square crit-square-optional"></span>Optional</span></td>
+      <td class="sp-cell">3</td>
+    </tr>
+    <tr class="detail-row" id="row-cloudreadiness-2" style="display:none;">
+      <td colspan="3">
+        <div class="detail-content">
+          <div class="file-list">
+            <table><colgroup><col style="width:70%"/><col style="width:30%"/></colgroup>
+            <thead><tr><th>File</th><th>Position</th></tr></thead><tbody>
+            <tr><td><span class="file-path" title="src/main/resources/batchscheduler.properties">src/main/resources/batchscheduler.properties</span></td><td><span class="position">Line 4, Col 0</span></td></tr>
+            <tr><td><span class="file-path" title="src/main/resources/batchscheduler.properties">src/main/resources/batchscheduler.properties</span></td><td><span class="position">Line 7, Col 0</span></td></tr>
+            <tr><td><span class="file-path" title="src/main/resources/batchscheduler.properties">src/main/resources/batchscheduler.properties</span></td><td><span class="position">Line 10, Col 0</span></td></tr>
+            <tr><td><span class="file-path" title="bin/main/batchscheduler.properties">bin/main/batchscheduler.properties</span></td><td><span class="position">Line 4, Col 0</span></td></tr>
+            <tr><td><span class="file-path" title="bin/main/batchscheduler.properties">bin/main/batchscheduler.properties</span></td><td><span class="position">Line 7, Col 0</span></td></tr>
+            <tr><td><span class="file-path" title="bin/main/batchscheduler.properties">bin/main/batchscheduler.properties</span></td><td><span class="position">Line 10, Col 0</span></td></tr>
+            </tbody></table>
+          </div>
+          <div class="explanation-panel">
+            <h4>Explanation</h4>
+            <div><p>This patterns verifies in source code and configuration files the presence of hardcoded URLs using the HTTP protocol (HTTP/HTTPS). This URL would need to be replaced by the new resource&#39;s URL during the Cloud migration, if any change occured.</p></div>
+          </div>
+        </div>
+      </td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class="issue-section" data-domain="java-upgrade">
+  <h2>Java Upgrade</h2>
+  <table class="issue-table">
+    <colgroup><col class="col-issue"/><col class="col-criticality"/><col class="col-storypoint"/></colgroup>
+    <thead><tr><th>Issue Category</th><th>Criticality</th><th>Story Point</th></tr></thead>
+    <tbody>
+    <tr class="issue-row" data-criticality="mandatory" data-targets='{"azure-aks":{"effort":8,"severity":"mandatory"},"azure-appservice":{"effort":8,"severity":"mandatory"},"azure-container-apps":{"effort":8,"severity":"mandatory"}}' data-default-effort="8" data-default-severity="mandatory" data-rule="azure-java-version-01000" onclick="toggleRow('row-javaupgrade-0', this)" style="cursor:pointer;">
+      <td style="white-space:normal;"><div class="issue-title-cell"><button class="expand-btn" id="btn-row-javaupgrade-0">&#x276F;</button> Java Version Has Reached the End of Support</div></td>
+      <td class="crit-cell"><span class="crit-label"><span class="crit-square crit-square-mandatory"></span>Mandatory</span></td>
+      <td class="sp-cell">8</td>
+    </tr>
+    <tr class="detail-row" id="row-javaupgrade-0" style="display:none;">
+      <td colspan="3">
+        <div class="detail-content">
+          <div class="file-list">
+            <table><colgroup><col style="width:70%"/><col style="width:30%"/></colgroup>
+            <thead><tr><th>File</th><th>Position</th></tr></thead><tbody>
+            <tr><td><span class="file-path" title="build.gradle">build.gradle</span></td><td><span class="position">Line 17, Col 0</span></td></tr>
+            <tr><td><span class="file-path" title="build.gradle">build.gradle</span></td><td><span class="position">Line 18, Col 0</span></td></tr>
+            </tbody></table>
+          </div>
+          <div class="explanation-panel">
+            <h4>Explanation</h4>
+            <div><p>The application is using a Java version that has reached the end of support. It is strongly recommended to plan and execute a migration strategy to upgrade your application to a supported Java version.<br/>Supported Java versions receive long-term support (LTS) from the Java community, including bug fixes and updates. Migrating to a supported version provides you with a stable and well-maintained platform for your application.</p></div>
+          </div>
+        </div>
+      </td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+</div><!-- #tab-issues -->
+<div id="tab-arch" class="tab-panel">
+  <div class="fact-content"><h1 id="architecture-diagram">Architecture Diagram</h1>
+<p>ZavaBatchScheduler is a standalone Java 8 batch scheduler that periodically invokes downstream banking microservices (interest accrual, statement generation, and daily reconciliation) and persists execution results to a SQL Server database.</p>
+<h2 id="application-architecture">Application Architecture</h2>
+<div class="mermaid">
+flowchart TD
+    subgraph Scheduler["Scheduler Layer - Java 8 / Gradle"]
+        Main["Main Entry Point"]
+        Exec["ScheduledExecutorService"]
+        Config["Properties Config Loader"]
+    end
+    subgraph BatchLogic["Batch Execution Layer"]
+        BatchRun["Batch Run Orchestrator"]
+        HttpClient["HTTP Service Caller"]
+    end
+    subgraph ExternalServices["External Banking Services"]
+        Interest["Interest Accrual Service\nzavainterestcalculator:8080"]
+        Statement["Statement Generation Service\nzavastatementservice:8080"]
+        Recon["Daily Reconciliation Service\nzavaledger:8080"]
+    end
+    subgraph DataLayer["Data Layer"]
+        JDBC["JDBC / mssql-jdbc 12.6"]
+        DB[("SQL Server\nsqlserver:1433\nZavaBankCore")]
+    end
+
+    Config -->|"loads properties"| Main
+    Main -->|"schedules periodic task"| Exec
+    Exec -->|"triggers every interval"| BatchRun
+    BatchRun -->|"HTTP POST"| HttpClient
+    HttpClient -->|"POST /api/batch/accrue-interest"| Interest
+    HttpClient -->|"POST /api/batch/generate-statements"| Statement
+    HttpClient -->|"POST /api/batch/reconcile-daily"| Recon
+    BatchRun -->|"INSERT BatchRunLog"| JDBC
+    JDBC -->|"SQL"| DB
+</div>
+<h3 id="technology-stack-summary">Technology Stack Summary</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Layer</th><th>Technology</th><th>Version</th><th>Purpose</th></tr></thead><tbody>
+<tr><td>Runtime</td><td>Java JRE (eclipse-temurin)</td><td>8</td><td>Application runtime</td></tr>
+<tr><td>Build</td><td>Gradle + Shadow JAR Plugin</td><td>7.6 / 7.1.2</td><td>Build and fat-JAR packaging</td></tr>
+<tr><td>Scheduling</td><td>java.util.concurrent.ScheduledExecutorService</td><td>JDK built-in</td><td>Periodic batch job execution</td></tr>
+<tr><td>HTTP Client</td><td>java.net.HttpURLConnection</td><td>JDK built-in</td><td>Calling downstream microservices</td></tr>
+<tr><td>Database Driver</td><td>Microsoft JDBC Driver for SQL Server</td><td>12.6.1.jre8</td><td>Batch run log persistence</td></tr>
+<tr><td>Messaging (unused at runtime)</td><td>RabbitMQ AMQP Client</td><td>5.21.0</td><td>Declared dependency, not used in current code</td></tr>
+<tr><td>Container</td><td>Docker (eclipse-temurin:8-jre)</td><td>multi-stage</td><td>Production container image</td></tr>
+</tbody></table></div>
+<h3 id="data-storage-external-services">Data Storage &amp; External Services</h3>
+<p>The application persists batch execution logs to a Microsoft SQL Server database (<code>ZavaBankCore</code>) using the official Microsoft JDBC driver over a plain JDBC connection (no ORM). Three downstream HTTP microservices are called on each batch cycle: the interest accrual service, the statement generation service, and the daily reconciliation service — all reached via configurable base URLs and endpoints loaded from <code>batchscheduler.properties</code> or environment variable overrides.</p>
+<h3 id="key-architectural-decisions">Key Architectural Decisions</h3>
+<ul>
+<li><strong>Single-class monolith</strong>: All scheduling, HTTP communication, JDBC persistence, and configuration loading are implemented in a single <code>Main</code> class with static helper methods, reflecting a minimal, dependency-light design.</li>
+<li><strong>Environment variable overrides</strong>: Every critical configuration value (service URLs, DB credentials, scheduler interval) can be overridden via environment variables, making the application container-friendly without code changes.</li>
+<li><strong>Run-to-completion batch model</strong>: Each scheduled execution runs all three service calls sequentially, aggregates their results, and writes a single <code>BatchRunLog</code> record — failures in individual services are recorded but do not abort the remaining calls.</li>
+</ul>
+<h2 id="component-relationships">Component Relationships</h2>
+<div class="mermaid">
+flowchart LR
+    subgraph Entry["Entry Point"]
+        MainMethod["main()"]
+        ShutdownHook["ShutdownHook"]
+    end
+    subgraph Scheduling["Scheduling"]
+        Scheduler["ScheduledExecutorService"]
+        RunLoop["Run Loop"]
+    end
+    subgraph BatchExec["Batch Execution"]
+        BatchOrch["executeBatchRun()"]
+        HttpCaller["callService()"]
+    end
+    subgraph Persistence["Persistence"]
+        LogWriter["insertBatchRunLog()"]
+    end
+    subgraph Config["Configuration"]
+        ConfigLoader["loadConfig()"]
+        EnvOverride["applyEnvOverride()"]
+    end
+
+    ConfigLoader -->|"reads classpath properties"| EnvOverride
+    EnvOverride -->|"resolved config"| MainMethod
+    MainMethod -->|"schedules"| Scheduler
+    MainMethod -->|"registers"| ShutdownHook
+    ShutdownHook -->|"signals stop"| RunLoop
+    Scheduler -->|"invokes periodically"| BatchOrch
+    BatchOrch -->|"calls 3 services"| HttpCaller
+    BatchOrch -->|"logs result"| LogWriter
+    HttpCaller -->|"HTTP POST"| HttpCaller
+</div>
+<h3 id="component-inventory">Component Inventory</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Component</th><th>Layer</th><th>Type</th><th>Responsibility</th></tr></thead><tbody>
+<tr><td><code>main()</code></td><td>Entry Point</td><td>Application entry</td><td>Initialises config, scheduler, and shutdown hook; hosts the run loop</td></tr>
+<tr><td><code>ShutdownHook</code></td><td>Entry Point</td><td>JVM hook</td><td>Sets <code>running = false</code> and shuts down the scheduler on SIGTERM/SIGINT</td></tr>
+<tr><td><code>ScheduledExecutorService</code></td><td>Scheduling</td><td>JDK concurrency</td><td>Triggers <code>executeBatchRun()</code> at a configurable fixed-delay interval</td></tr>
+<tr><td><code>executeBatchRun()</code></td><td>Batch Execution</td><td>Orchestrator</td><td>Calls all three downstream services, aggregates status, delegates to log writer</td></tr>
+<tr><td><code>callService()</code></td><td>Batch Execution</td><td>HTTP client utility</td><td>Opens an <code>HttpURLConnection</code>, sends a JSON POST, reads the response, returns success/failure</td></tr>
+<tr><td><code>insertBatchRunLog()</code></td><td>Persistence</td><td>JDBC writer</td><td>Opens a JDBC connection and inserts a <code>BatchRunLog</code> record with run type, timestamps, status, and details</td></tr>
+<tr><td><code>loadConfig()</code></td><td>Configuration</td><td>Config loader</td><td>Loads <code>batchscheduler.properties</code> from the classpath</td></tr>
+<tr><td><code>applyEnvOverride()</code></td><td>Configuration</td><td>Env mapper</td><td>Overrides specific property keys from corresponding environment variables</td></tr>
+</tbody></table></div>
+</div>
+</div>
+<div id="tab-api" class="tab-panel">
+  <div class="fact-content"><h1 id="api-service-communication-contracts">API &amp; Service Communication Contracts</h1>
+<p>ZavaBatchScheduler exposes no inbound API endpoints — it is a pure outbound HTTP client that drives three downstream banking microservices via synchronous REST POST calls on a scheduled interval.</p>
+<h2 id="service-catalog">Service Catalog</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Port</th><th>Category</th><th>Purpose</th></tr></thead><tbody>
+<tr><td>ZavaBatchScheduler</td><td>— (no inbound port)</td><td>Business</td><td>Scheduled batch orchestrator; calls downstream services and logs results to SQL Server</td></tr>
+<tr><td>Interest Accrual Service (<code>zavainterestcalculator</code>)</td><td>8080</td><td>Business</td><td>Downstream: performs nightly interest accrual for all accounts</td></tr>
+<tr><td>Statement Generation Service (<code>zavastatementservice</code>)</td><td>8080</td><td>Business</td><td>Downstream: generates periodic account statements</td></tr>
+<tr><td>Daily Reconciliation Service (<code>zavaledger</code>)</td><td>8080</td><td>Business</td><td>Downstream: performs end-of-day ledger reconciliation</td></tr>
+<tr><td>SQL Server (<code>sqlserver</code>)</td><td>1433</td><td>Infrastructure</td><td>Downstream: stores <code>BatchRunLog</code> records for audit and monitoring</td></tr>
+</tbody></table></div>
+<h2 id="api-endpoints-inventory">API Endpoints Inventory</h2>
+<p>ZavaBatchScheduler does not expose any inbound HTTP endpoints. It acts solely as a client. The outbound calls it makes are listed below:</p>
+<div class="table-wrap"><table><thead><tr>
+<th>Caller</th><th>Method</th><th>Path</th><th>Request Payload</th><th>Expected Response</th></tr></thead><tbody>
+<tr><td>ZavaBatchScheduler</td><td>POST</td><td><code>/api/batch/accrue-interest</code> (on <code>zavainterestcalculator:8080</code>)</td><td><code>{&quot;job&quot;:&quot;interest_accrual&quot;}</code></td><td>2xx = success</td></tr>
+<tr><td>ZavaBatchScheduler</td><td>POST</td><td><code>/api/batch/generate-statements</code> (on <code>zavastatementservice:8080</code>)</td><td><code>{&quot;job&quot;:&quot;statement_generation&quot;}</code></td><td>2xx = success</td></tr>
+<tr><td>ZavaBatchScheduler</td><td>POST</td><td><code>/api/batch/reconcile-daily</code> (on <code>zavaledger:8080</code>)</td><td><code>{&quot;job&quot;:&quot;daily_reconciliation&quot;}</code></td><td>2xx = success</td></tr>
+</tbody></table></div>
+<h2 id="management-observability-endpoints">Management &amp; Observability Endpoints</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Endpoint</th><th>Custom Metrics</th></tr></thead><tbody>
+<tr><td>ZavaBatchScheduler</td><td>None</td><td>No health check, actuator, or metrics endpoint is exposed</td></tr>
+</tbody></table></div>
+<p>&gt; Note: The scheduler has no HTTP server embedded, so no management endpoints (health probes, readiness checks, metrics scrape endpoints) are available.</p>
+<h2 id="dtos-contracts">DTOs &amp; Contracts</h2>
+<p>No formal DTO or contract classes are defined. All request bodies are inline JSON string literals hardcoded in <code>executeBatchRun()</code>:</p>
+<ul>
+<li><code>{&quot;job&quot;:&quot;interest_accrual&quot;}</code> — sent to the interest accrual service</li>
+<li><code>{&quot;job&quot;:&quot;statement_generation&quot;}</code> — sent to the statement generation service</li>
+<li><code>{&quot;job&quot;:&quot;daily_reconciliation&quot;}</code> — sent to the reconciliation service</li>
+</ul>
+<p>No response bodies are deserialized; the application reads the raw response body only for logging purposes and uses the HTTP status code (2xx vs non-2xx) as the sole success indicator. No OpenAPI/Swagger specification, protobuf schemas, or GraphQL schemas are present. Serialization is handled via raw <code>String.getBytes(StandardCharsets.UTF_8)</code>.</p>
+<h2 id="communication-patterns">Communication Patterns</h2>
+<p><strong>Synchronous HTTP (outbound only):</strong> All three downstream service calls are synchronous HTTP POSTs using <code>java.net.HttpURLConnection</code>. Calls are made sequentially — interest accrual first, then statement generation, then reconciliation. A failure in one call does not abort subsequent calls; the result is recorded and the run continues.</p>
+<p><strong>No resilience patterns:</strong> There is no retry logic, circuit breaker, timeout escalation, or bulkhead pattern. A single configurable socket timeout (<code>http.timeout.ms</code>, default 15 000 ms) applies to both connection and read phases. If a downstream service is slow or unavailable, the scheduler blocks for up to 15 seconds per call before marking it as failed.</p>
+<p><strong>Service discovery:</strong> No service discovery mechanism is used. All downstream service hostnames are resolved via Docker / container DNS (plain hostnames such as <code>zavainterestcalculator</code>). URLs are configurable via <code>batchscheduler.properties</code> or environment variable overrides, but no dynamic registry is consulted.</p>
+<p><strong>No API gateway:</strong> Calls are made directly to each service without any intermediary gateway or load balancer.</p>
+<p><strong>Security posture:</strong> No authentication, no TLS, and no authorization are configured. All three downstream HTTP calls are plain HTTP with no <code>Authorization</code> header or token. The SQL Server connection uses a hardcoded username/password from the properties file (overridable via <code>SQLSERVER_USERNAME</code> / <code>SQLSERVER_PASSWORD</code> environment variables). There is no network-level or application-level security on the outbound calls.</p>
+<p><strong>Startup dependency chain:</strong> The scheduler starts immediately on container launch; it does not wait for downstream services to become healthy. If a downstream service is unavailable at the first scheduled run, the call is marked as failed and logged — no startup health gate is enforced.</p>
+<h2 id="service-technology-matrix">Service Technology Matrix</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Web Framework</th><th>Data Access</th><th>Discovery</th><th>Gateway</th><th>Health Check</th><th>Cache</th><th>Metrics</th></tr></thead><tbody>
+<tr><td>ZavaBatchScheduler</td><td>None (no HTTP server)</td><td>JDBC (mssql-jdbc 12.6)</td><td>None (container DNS)</td><td>None</td><td>None</td><td>None</td><td>None (stdout only)</td></tr>
+<tr><td>zavainterestcalculator</td><td>Unknown (external)</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>zavastatementservice</td><td>Unknown (external)</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>zavaledger</td><td>Unknown (external)</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+</tbody></table></div>
+<h2 id="service-communication-sequence">Service Communication Sequence</h2>
+<div class="mermaid">
+sequenceDiagram
+    participant Timer as "ScheduledExecutorService"
+    participant Orch as "executeBatchRun()"
+    participant HTTP as "callService() / HttpURLConnection"
+    participant Interest as "Interest Accrual Service\nzavainterestcalculator:8080"
+    participant Stmt as "Statement Generation Service\nzavastatementservice:8080"
+    participant Recon as "Reconciliation Service\nzavaledger:8080"
+    participant DB as "SQL Server\nBatchRunLog"
+
+    Timer->>Orch: trigger (every interval ms)
+    Orch->>HTTP: POST /api/batch/accrue-interest
+    alt HTTP 2xx
+        Interest-->>HTTP: 200 OK
+        HTTP-->>Orch: interestOk = true
+    else HTTP error or timeout
+        Interest-->>HTTP: 4xx/5xx or exception
+        HTTP-->>Orch: interestOk = false
+    end
+    Orch->>HTTP: POST /api/batch/generate-statements
+    alt HTTP 2xx
+        Stmt-->>HTTP: 200 OK
+        HTTP-->>Orch: statementOk = true
+    else HTTP error or timeout
+        Stmt-->>HTTP: 4xx/5xx or exception
+        HTTP-->>Orch: statementOk = false
+    end
+    Orch->>HTTP: POST /api/batch/reconcile-daily
+    alt HTTP 2xx
+        Recon-->>HTTP: 200 OK
+        HTTP-->>Orch: reconOk = true
+    else HTTP error or timeout
+        Recon-->>HTTP: 4xx/5xx or exception
+        HTTP-->>Orch: reconOk = false
+    end
+    Orch->>DB: INSERT BatchRunLog (status, details, timestamps)
+    DB-->>Orch: row inserted (or log error on failure)
+</div>
+</div>
+</div>
+<div id="tab-config" class="tab-panel">
+  <div class="fact-content"><h1 id="configuration-externalized-settings-inventory">Configuration &amp; Externalized Settings Inventory</h1>
+<p>ZavaBatchScheduler is configured via a single classpath properties file (<code>batchscheduler.properties</code>) with all 10 properties overridable through environment variables; there are no runtime profiles, feature flags, or external secret stores.</p>
+<h2 id="configuration-sources">Configuration Sources</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Source</th><th>Type</th><th>Path / Location</th><th>Notes</th></tr></thead><tbody>
+<tr><td><code>batchscheduler.properties</code></td><td>Java classpath properties file</td><td><code>src/main/resources/batchscheduler.properties</code></td><td>Primary and only config file; bundled inside the fat JAR at build time</td></tr>
+<tr><td>Environment variables</td><td>OS / container env</td><td>Set by container orchestrator or <code>docker run -e</code></td><td>Override any property at runtime via a fixed env-var-to-key mapping in <code>applyEnvOverride()</code></td></tr>
+</tbody></table></div>
+<p>No Spring Cloud Config, Azure App Configuration, HashiCorp Vault, AWS Secrets Manager, or any external config server is used.</p>
+<h2 id="build-profiles">Build Profiles</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Profile</th><th>Activation</th><th>Purpose</th><th>Key Dependencies / Plugins</th></tr></thead><tbody>
+<tr><td>Default (single build)</td><td>Automatic — no profile switching</td><td>Compiles Java 8 source, produces a fat JAR via Shadow plugin</td><td><code>com.github.johnrengelman.shadow 7.1.2</code></td></tr>
+</tbody></table></div>
+<p>No additional Gradle build variants, flavors, or conditional build profiles are defined in <code>build.gradle</code>.</p>
+<h2 id="runtime-profiles">Runtime Profiles</h2>
+<p>No runtime profiles are defined. The application has a single configuration file and no profile-switching mechanism (<code>spring.profiles.active</code>, <code>@Profile</code>, or equivalent). All configuration is resolved from <code>batchscheduler.properties</code> plus environment variable overrides at startup.</p>
+<div class="table-wrap"><table><thead><tr>
+<th>Profile</th><th>Activation Method</th><th>Config Files</th><th>Key Overrides</th></tr></thead><tbody>
+<tr><td>Default (only profile)</td><td>N/A — always active</td><td><code>batchscheduler.properties</code></td><td>All properties via environment variables</td></tr>
+</tbody></table></div>
+<h2 id="properties-inventory">Properties Inventory</h2>
+<h3 id="zavabatchscheduler-batchschedulerproperties">ZavaBatchScheduler — <code>batchscheduler.properties</code></h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Property Key</th><th>Default Value</th><th>Env Variable Override</th><th>Type</th><th>Notes</th></tr></thead><tbody>
+<tr><td><code>scheduler.interval.ms</code></td><td><code>300000</code></td><td><code>BATCH_SCHEDULER_INTERVAL_MS</code></td><td>long (ms)</td><td>Delay between batch run cycles (5 minutes by default)</td></tr>
+<tr><td><code>http.timeout.ms</code></td><td><code>15000</code></td><td>—</td><td>int (ms)</td><td>Socket connect and read timeout applied to all three downstream HTTP calls</td></tr>
+<tr><td><code>interest.service.url</code></td><td><code>http://zavainterestcalculator:8080</code></td><td><code>INTEREST_SERVICE_URL</code></td><td>URL string</td><td>Base URL for interest accrual service</td></tr>
+<tr><td><code>interest.service.endpoint</code></td><td><code>/api/batch/accrue-interest</code></td><td><code>INTEREST_SERVICE_ENDPOINT</code></td><td>path string</td><td>Endpoint path appended to the base URL</td></tr>
+<tr><td><code>statement.service.url</code></td><td><code>http://zavastatementservice:8080</code></td><td><code>STATEMENT_SERVICE_URL</code></td><td>URL string</td><td>Base URL for statement generation service</td></tr>
+<tr><td><code>statement.service.endpoint</code></td><td><code>/api/batch/generate-statements</code></td><td><code>STATEMENT_SERVICE_ENDPOINT</code></td><td>path string</td><td>Endpoint path appended to the base URL</td></tr>
+<tr><td><code>reconciliation.service.url</code></td><td><code>http://zavaledger:8080</code></td><td><code>RECON_SERVICE_URL</code></td><td>URL string</td><td>Base URL for daily reconciliation service</td></tr>
+<tr><td><code>reconciliation.service.endpoint</code></td><td><code>/api/batch/reconcile-daily</code></td><td><code>RECON_SERVICE_ENDPOINT</code></td><td>path string</td><td>Endpoint path appended to the base URL</td></tr>
+<tr><td><code>db.url</code></td><td><code>jdbc:sqlserver://sqlserver:1433;databaseName=ZavaBankCore;encrypt=false;trustServerCertificate=true</code></td><td><code>SQLSERVER_URL</code></td><td>JDBC URL</td><td>SQL Server connection string; encryption disabled by default</td></tr>
+<tr><td><code>db.username</code></td><td><code>sa</code></td><td><code>SQLSERVER_USERNAME</code></td><td>string</td><td>SQL Server login; <code>sa</code> is the default system administrator account</td></tr>
+<tr><td><code>db.password</code></td><td><code>YourStrong!Passw0rd</code></td><td><code>SQLSERVER_PASSWORD</code></td><td>string (sensitive)</td><td>Plaintext credential in properties file; must be overridden in production</td></tr>
+</tbody></table></div>
+<h2 id="startup-parameters-resource-requirements">Startup Parameters &amp; Resource Requirements</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>JVM / Runtime Options</th><th>Memory</th><th>Instance Count</th></tr></thead><tbody>
+<tr><td>ZavaBatchScheduler</td><td>None configured; default JVM heap applies</td><td>Not specified (no Docker <code>mem_limit</code>, no K8s resource limits declared)</td><td>1 (single-instance scheduler; no horizontal scaling)</td></tr>
+</tbody></table></div>
+<p>No <code>-Xms</code>/<code>-Xmx</code> heap flags, system properties, or GC tuning options are configured. The container CMD is <code>java -jar app.jar</code> with no additional JVM arguments.</p>
+<h2 id="startup-dependency-chain">Startup Dependency Chain</h2>
+<p>The application starts unconditionally on container launch with no readiness probes or wait mechanisms:</p>
+<ol>
+<li><strong>ZavaBatchScheduler</strong> starts → reads <code>batchscheduler.properties</code> / env vars → registers shutdown hook → schedules batch job</li>
+<li><strong>First batch run fires at <code>initialDelay = 0</code></strong> — all three downstream services and SQL Server are expected to be available at this point</li>
+</ol>
+<p>No <code>dockerize</code>, <code>wait-for-tcp</code>, Docker Compose <code>depends_on</code> with health checks, or Kubernetes readiness probe is configured. If <code>sqlserver</code> or any downstream service is unavailable at the first scheduled run, the failure is logged and the next run is attempted after <code>scheduler.interval.ms</code>.</p>
+<h2 id="secrets-sensitive-configuration">Secrets &amp; Sensitive Configuration</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Secret Reference</th><th>Type</th><th>Default / Storage</th></tr></thead><tbody>
+<tr><td><code>db.password</code> / <code>SQLSERVER_PASSWORD</code></td><td>SQL Server password</td><td><code>YourStrong!Passw0rd</code> in plaintext in <code>batchscheduler.properties</code></td></tr>
+<tr><td><code>db.username</code> / <code>SQLSERVER_USERNAME</code></td><td>SQL Server username</td><td><code>sa</code> in plaintext in <code>batchscheduler.properties</code></td></tr>
+<tr><td><code>db.url</code> / <code>SQLSERVER_URL</code></td><td>JDBC connection string</td><td>Contains server hostname/port/DB name; no credential in URL by default</td></tr>
+</tbody></table></div>
+<h3 id="secrets-provisioning-workflow">Secrets Provisioning Workflow</h3>
+<p>Secrets are currently stored as plaintext default values inside the bundled <code>batchscheduler.properties</code> file. The intended provisioning model is:</p>
+<ol>
+<li><strong>At deployment time</strong>, set the <code>SQLSERVER_PASSWORD</code> and <code>SQLSERVER_USERNAME</code> environment variables in the container runtime (e.g., via Kubernetes Secret → <code>envFrom</code>, Docker Compose <code>env_file</code>, or Azure Container Apps secrets).</li>
+<li><code>applyEnvOverride()</code> in <code>Main.loadConfig()</code> reads these environment variables and overrides the in-file defaults before any connection is attempted.</li>
+<li>No secret store (Key Vault, Vault, AWS Secrets Manager) is integrated. Secrets must reach the container as environment variables through the deployment platform&#39;s native secret injection mechanism.</li>
+</ol>
+<p><strong>Risk</strong>: if the container is run without overriding <code>SQLSERVER_PASSWORD</code>, the default <code>YourStrong!Passw0rd</code> is used. No startup guard or validation prevents this.</p>
+<h2 id="feature-flags">Feature Flags</h2>
+<p>No feature flag framework is used. There are no <code>@ConditionalOnProperty</code>, LaunchDarkly, Unleash, or custom toggle mechanisms in the codebase.</p>
+<div class="table-wrap"><table><thead><tr>
+<th>Flag Name</th><th>Default</th><th>Controlled By</th></tr></thead><tbody>
+<tr><td>—</td><td>—</td><td>No feature flags detected</td></tr>
+</tbody></table></div>
+<h2 id="framework-runtime-versions">Framework &amp; Runtime Versions</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Component</th><th>Version</th><th>Source</th></tr></thead><tbody>
+<tr><td>Java (source / target compatibility)</td><td>8</td><td><code>build.gradle</code> (<code>JavaVersion.VERSION_1_8</code>)</td></tr>
+<tr><td>Gradle build tool</td><td>7.6</td><td><code>Dockerfile</code> (<code>gradle:7.6-jdk8</code> build stage)</td></tr>
+<tr><td>Shadow JAR Plugin</td><td>7.1.2</td><td><code>build.gradle</code> (<code>com.github.johnrengelman.shadow</code>)</td></tr>
+<tr><td>Docker build base image</td><td><code>gradle:7.6-jdk8</code></td><td><code>Dockerfile</code> (build stage)</td></tr>
+<tr><td>Docker runtime base image</td><td><code>eclipse-temurin:8-jre</code></td><td><code>Dockerfile</code> (runtime stage)</td></tr>
+<tr><td>mssql-jdbc</td><td>12.6.1.jre8</td><td><code>build.gradle</code> (implementation dependency)</td></tr>
+<tr><td>amqp-client (RabbitMQ)</td><td>5.21.0</td><td><code>build.gradle</code> (implementation dependency; unused at runtime)</td></tr>
+</tbody></table></div>
+</div>
+</div>
+<div id="tab-workflows" class="tab-panel">
+  <div class="fact-content"><h1 id="core-business-workflows">Core Business Workflows</h1>
+<p>ZavaBatchScheduler is a financial batch orchestrator that drives three core end-of-day banking operations — interest accrual, account statement generation, and ledger reconciliation — on a configurable schedule and records the outcome of each cycle for audit purposes.</p>
+<h2 id="domain-entities">Domain Entities</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Entity</th><th>Service / Bounded Context</th><th>Description</th><th>Key Relationships</th></tr></thead><tbody>
+<tr><td>BatchRunLog</td><td>ZavaBatchScheduler — Batch Audit</td><td>Immutable audit record of a single batch execution cycle, capturing overall status and per-job outcomes</td><td>Standalone; no FK relationships to other entities visible from this service</td></tr>
+<tr><td>Account / Balance</td><td>Interest Accrual (zavainterestcalculator)</td><td>Bank accounts subject to periodic interest accrual</td><td>Owned by downstream service; referenced indirectly by the interest accrual job</td></tr>
+<tr><td>Statement</td><td>Statement Generation (zavastatementservice)</td><td>Periodic account statements produced for customers</td><td>Owned by downstream service; generated by the statement job</td></tr>
+<tr><td>Ledger Entry</td><td>Reconciliation (zavaledger)</td><td>Daily ledger entries balanced during reconciliation</td><td>Owned by downstream service; reconciled by the daily reconciliation job</td></tr>
+</tbody></table></div>
+<h2 id="service-to-domain-mapping">Service-to-Domain Mapping</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Domain Context</th><th>Owned Entities</th><th>External Dependencies</th></tr></thead><tbody>
+<tr><td>ZavaBatchScheduler</td><td>Batch Orchestration</td><td>BatchRunLog</td><td>Interest Accrual Service, Statement Generation Service, Reconciliation Service, SQL Server (ZavaBankCore)</td></tr>
+<tr><td>zavainterestcalculator</td><td>Interest Management</td><td>Account balances, interest calculations</td><td>Called via HTTP POST by ZavaBatchScheduler</td></tr>
+<tr><td>zavastatementservice</td><td>Statement Management</td><td>Customer account statements</td><td>Called via HTTP POST by ZavaBatchScheduler</td></tr>
+<tr><td>zavaledger</td><td>Ledger &amp; Reconciliation</td><td>Daily ledger entries, reconciliation records</td><td>Called via HTTP POST by ZavaBatchScheduler</td></tr>
+</tbody></table></div>
+<p>ZavaBatchScheduler acts as the orchestration context only — it does not own or read any domain data from the downstream services. Each downstream service is the sole source of truth for its own domain entities.</p>
+<h2 id="primary-workflows">Primary Workflows</h2>
+<h3 id="workflow-1-periodic-batch-execution-cycle">Workflow 1: Periodic Batch Execution Cycle</h3>
+<p><strong>Trigger</strong>: Timer fires after <code>scheduler.interval.ms</code> (default: every 5 minutes; intended for nightly/periodic banking operations).</p>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li>The scheduler wakes up and checks the <code>running</code> flag; if shutdown has been requested, the run is skipped.</li>
+<li>Record the batch run start time.</li>
+<li><strong>Interest Accrual Job</strong>: Send an HTTP POST to the interest accrual service. Receive success or failure outcome.</li>
+<li><strong>Statement Generation Job</strong>: Send an HTTP POST to the statement generation service. Receive success or failure outcome. This step executes regardless of the outcome of step 3.</li>
+<li><strong>Daily Reconciliation Job</strong>: Send an HTTP POST to the reconciliation service. Receive success or failure outcome. This step executes regardless of the outcomes of steps 3 and 4.</li>
+<li><strong>Aggregate outcome</strong>: Derive overall batch status — <code>SUCCESS</code> if all three jobs returned a 2xx response; <code>FAILED</code> if any job returned a non-2xx response or threw an exception.</li>
+<li><strong>Audit log</strong>: Insert a <code>BatchRunLog</code> record into SQL Server with the start time, end time, aggregated status, and per-job boolean results.</li>
+<li>Wait for the next timer tick.</li>
+</ol>
+<p><strong>Business rule involved</strong>: All three jobs must succeed for the batch run to be marked <code>SUCCESS</code>. A partial success (e.g., only interest accrual failed) is still recorded as <code>FAILED</code>, with the details field identifying which jobs succeeded and which did not.</p>
+<h3 id="workflow-2-graceful-shutdown">Workflow 2: Graceful Shutdown</h3>
+<p><strong>Trigger</strong>: JVM receives SIGTERM or SIGINT (e.g., <code>docker stop</code>, <code>kubectl delete pod</code>, OS signal).</p>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li>The JVM shutdown hook fires and sets <code>running = false</code>.</li>
+<li><code>scheduler.shutdownNow()</code> is called, cancelling any pending scheduled task.</li>
+<li>If a batch run is currently in progress, it completes its current HTTP call (no mid-run interruption is enforced), but the run loop exits at the next iteration check.</li>
+<li>The application logs &quot;Shutdown requested&quot; and then &quot;ZavaBatchScheduler stopped.&quot;</li>
+</ol>
+<h2 id="cross-service-data-flows">Cross-Service Data Flows</h2>
+<p>ZavaBatchScheduler uses a <strong>fire-and-forget orchestration pattern</strong> rather than data aggregation. It sends a minimal trigger payload to each downstream service and receives only a success/failure signal (HTTP status code) in return. No domain data is read back, merged, or forwarded between services.</p>
+<p><strong>Flow</strong>:</p>
+<pre><code>
+ZavaBatchScheduler → POST (trigger payload) → Interest Accrual Service → performs accrual internally
+ZavaBatchScheduler → POST (trigger payload) → Statement Generation Service → generates statements internally
+ZavaBatchScheduler → POST (trigger payload) → Reconciliation Service → reconciles ledger internally
+</code></pre>
+<p>Each downstream service operates independently on its own data store. ZavaBatchScheduler records only the aggregate outcome.</p>
+<p><strong>Fallback behavior</strong>: There is no circuit breaker. If a downstream service is unavailable (connection refused, timeout, or 5xx response), the call is marked as failed after the configured timeout (default 15 seconds). The scheduler records the failure in <code>BatchRunLog</code> and continues to the next scheduled cycle — there is no retry, no compensating action, and no alerting mechanism beyond stdout logging.</p>
+<h2 id="business-workflow-sequence">Business Workflow Sequence</h2>
+<div class="mermaid">
+sequenceDiagram
+    participant Timer as "Scheduled Timer"
+    participant Scheduler as "ZavaBatchScheduler"
+    participant Interest as "Interest Accrual Service"
+    participant Stmt as "Statement Generation Service"
+    participant Recon as "Reconciliation Service"
+    participant AuditDB as "BatchRunLog (SQL Server)"
+
+    Timer->>Scheduler: Timer fires (every interval)
+    Note over Scheduler: Check running flag
+    Scheduler->>Interest: Trigger interest accrual job
+    alt Interest Accrual Succeeds
+        Interest-->>Scheduler: HTTP 2xx - accrual complete
+    else Interest Accrual Fails
+        Interest-->>Scheduler: HTTP error or timeout
+        Note over Scheduler: interestOk = false, continue
+    end
+    Scheduler->>Stmt: Trigger statement generation job
+    alt Statement Generation Succeeds
+        Stmt-->>Scheduler: HTTP 2xx - statements generated
+    else Statement Generation Fails
+        Stmt-->>Scheduler: HTTP error or timeout
+        Note over Scheduler: statementOk = false, continue
+    end
+    Scheduler->>Recon: Trigger daily reconciliation job
+    alt Reconciliation Succeeds
+        Recon-->>Scheduler: HTTP 2xx - reconciliation complete
+    else Reconciliation Fails
+        Recon-->>Scheduler: HTTP error or timeout
+        Note over Scheduler: reconOk = false, continue
+    end
+    Note over Scheduler: Derive status: SUCCESS if all ok, else FAILED
+    Scheduler->>AuditDB: Insert BatchRunLog record
+    AuditDB-->>Scheduler: Row inserted
+</div>
+<h2 id="business-rules-decision-logic">Business Rules &amp; Decision Logic</h2>
+<p><strong>Decision logic:</strong></p>
+<ul>
+<li><strong>Overall batch status</strong>: The batch run is <code>SUCCESS</code> only when all three downstream jobs return a 2xx HTTP response. Any individual job failure results in an overall <code>FAILED</code> status for the run, regardless of how many jobs succeeded.</li>
+<li><strong>Independent job execution</strong>: A failure in one job does not abort the remaining jobs. All three are always attempted in the same cycle, ensuring that a transient failure in one service does not prevent the other two from being triggered.</li>
+<li><strong>Skip on shutdown</strong>: If the JVM is shutting down (<code>running = false</code>), in-progress timer invocations exit immediately without executing any batch work.</li>
+</ul>
+<p><strong>Error handling:</strong></p>
+<ul>
+<li>Individual job failures are caught as exceptions or non-2xx HTTP responses. The error message (exception text or HTTP body) is logged to stdout. No dead-letter queue, retry queue, or alerting system is in place.</li>
+<li>A failure to insert the <code>BatchRunLog</code> record (e.g., SQL Server unavailable) is caught and logged to stdout; it does not re-throw or affect the scheduler lifecycle.</li>
+</ul>
+<p><strong>Audit/logging:</strong></p>
+<ul>
+<li>Every batch run — successful or failed — results in one <code>BatchRunLog</code> row providing a full audit trail: run type, start and end timestamps, overall status, and per-job success flags.</li>
+<li>Supplementary diagnostic messages are written to stdout with ISO 8601 timestamps.</li>
+</ul>
+<p><strong>Authorization:</strong></p>
+<ul>
+<li>No authorization controls are applied. The scheduler runs as an unattended process with no user identity, session, or role-based access checks. Access to downstream services is unrestricted (plain HTTP, no authentication header).</li>
+</ul>
+<p><strong>Transactions:</strong></p>
+<ul>
+<li>No distributed transaction spans the three downstream service calls. Each call is independent; there is no saga or compensating transaction if one service succeeds and another fails.</li>
+<li>The <code>BatchRunLog</code> INSERT is a single-row, auto-committed JDBC operation. It is not transactionally linked to the downstream service calls.</li>
+</ul>
+</div>
+</div>
+<div id="tab-deps" class="tab-panel">
+  <div class="fact-content"><h1 id="dependency-map">Dependency Map</h1>
+<p>ZavaBatchScheduler declares 2 external runtime dependencies managed via Gradle 7.6, plus 1 build plugin. No test-scoped dependencies are declared.</p>
+<h2 id="dependencies">Dependencies</h2>
+<div class="mermaid">
+flowchart LR
+    App["ZavaBatchScheduler\nJava 8"]
+
+    subgraph DB["Database / ORM"]
+        MSSQL["MS SQL Server JDBC Driver\n12.6.1.jre8"]
+    end
+    subgraph Messaging["Messaging"]
+        RabbitMQ["RabbitMQ AMQP Client\n5.21.0"]
+    end
+    subgraph Build["Build Tooling"]
+        Shadow["Shadow JAR Plugin\n7.1.2"]
+    end
+
+    App -->|"persistence"| DB
+    App -->|"messaging"| Messaging
+    App -->|"fat-JAR packaging"| Build
+</div>
+<h3 id="dependency-summary">Dependency Summary</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Category</th><th>Count</th><th>Key Libraries</th><th>Notes</th></tr></thead><tbody>
+<tr><td>Database / ORM</td><td>1</td><td>mssql-jdbc 12.6.1.jre8</td><td>Microsoft JDBC driver for SQL Server; jre8 classifier targets Java 8 runtime</td></tr>
+<tr><td>Messaging</td><td>1</td><td>amqp-client 5.21.0</td><td>RabbitMQ Java client; declared but not used in any source file</td></tr>
+<tr><td>Build Tooling</td><td>1</td><td>Shadow JAR Plugin 7.1.2</td><td>Gradle plugin for producing an uber/fat JAR; not a runtime dependency</td></tr>
+</tbody></table></div>
+<h3 id="version-compatibility-risks">Version &amp; Compatibility Risks</h3>
+<p>The <code>mssql-jdbc 12.6.1.jre8</code> driver is relatively current (released 2024) and carries no known end-of-life concern; however the <code>jre8</code> classifier will need to be changed to <code>jre11</code> or higher should the Java runtime be upgraded. The <code>amqp-client 5.21.0</code> is a recent release of the official RabbitMQ Java client with no immediate EOL concern, but it introduces unnecessary binary footprint and a transitive dependency surface since it is not referenced anywhere in the application source. The Gradle 7.6 toolchain and Shadow JAR plugin 7.1.2 are both in the older Gradle 7.x series; Gradle 8.x is the current supported line.</p>
+<h3 id="notable-observations">Notable Observations</h3>
+<ul>
+<li><strong>Unused dependency</strong>: <code>com.rabbitmq:amqp-client:5.21.0</code> is declared as a compile-scope dependency but is not imported or used anywhere in <code>Main.java</code>. This adds unnecessary binary size and transitive exposure; it should be removed.</li>
+<li><strong>JDK built-in HTTP client</strong>: The application relies on <code>java.net.HttpURLConnection</code> (JDK built-in) for all HTTP communication rather than a third-party client (e.g., Apache HttpClient, OkHttp). This keeps the dependency footprint small but offers no retry, connection pooling, or timeout management beyond basic socket timeouts.</li>
+<li><strong>No logging framework</strong>: There is no SLF4J, Logback, or Log4j dependency. All logging is done via <code>System.out.println</code>, which limits structured/configurable logging in production container environments.</li>
+<li><strong>No dependency locking</strong>: No Gradle lock files or version catalogs are present, meaning transitive dependency versions are resolved dynamically at build time and may shift between builds.</li>
+</ul>
+<h2 id="test-dependencies">Test Dependencies</h2>
+<p>No test-scoped dependencies are declared in <code>build.gradle</code>.</p>
+<p>Total test-scope dependencies: 0</p>
+<p>No test framework (JUnit, TestNG, Mockito, etc.) is configured for this project. There are no unit or integration tests present in the source tree, which is a significant gap for a financial batch processing component.</p>
+</div>
+</div>
+<div id="tab-data" class="tab-panel">
+  <div class="fact-content"><h1 id="data-architecture-persistence-layer">Data Architecture &amp; Persistence Layer</h1>
+<p>ZavaBatchScheduler uses a single SQL Server database (<code>ZavaBankCore</code>) accessed exclusively via plain JDBC (no ORM), writing to one table — <code>BatchRunLog</code> — to record the outcome of each batch execution cycle.</p>
+<h2 id="database-configuration">Database Configuration</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service/Module</th><th>DB Type</th><th>Profile</th><th>Driver</th><th>Connection</th><th>Migration Tool</th></tr></thead><tbody>
+<tr><td>ZavaBatchScheduler</td><td>Microsoft SQL Server</td><td>All (single profile)</td><td>mssql-jdbc 12.6.1.jre8</td><td><code>sqlserver:1433</code>, database <code>ZavaBankCore</code>, plain TCP (encrypt=false)</td><td>None — schema management is external to the application</td></tr>
+</tbody></table></div>
+<p>&gt; Schema is not managed by this application. The <code>BatchRunLog</code> table must be pre-created in the target database. No Flyway, Liquibase, or DDL auto-generation is configured. For full property inventory, see <code>configuration-inventory.md</code>.</p>
+<h2 id="data-ownership-per-service">Data Ownership per Service</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Tables Owned</th><th>ORM Framework</th><th>Caching</th><th>Notes</th></tr></thead><tbody>
+<tr><td>ZavaBatchScheduler</td><td><code>BatchRunLog</code></td><td>None (plain JDBC via <code>DriverManager</code>)</td><td>None</td><td>Single INSERT per batch run; no SELECT or UPDATE queries performed by this service</td></tr>
+</tbody></table></div>
+<h2 id="entity-model">Entity Model</h2>
+<p>&gt; Note: No JPA/Hibernate or ORM entity classes are defined. The <code>BatchRunLog</code> schema is inferred from the prepared statement in <code>insertBatchRunLog()</code>.</p>
+<div class="mermaid">
+erDiagram
+    BatchRunLog {
+        int     Id          PK    "auto-increment identity, implicit"
+        string  RunType           "always 'nightly'"
+        datetime StartedAt        "batch run start timestamp"
+        datetime EndedAt          "batch run end timestamp"
+        string  Status            "SUCCESS or FAILED"
+        string  Details           "per-job boolean results"
+    }
+</div>
+<h2 id="key-repository-methods">Key Repository Methods</h2>
+<p>No formal repository interfaces are defined. All data access is performed inline in <code>Main.java</code> using raw JDBC.</p>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Access Pattern</th><th>SQL Operation</th><th>Purpose</th></tr></thead><tbody>
+<tr><td>ZavaBatchScheduler</td><td><code>insertBatchRunLog()</code> static method</td><td><code>INSERT INTO BatchRunLog (RunType, StartedAt, EndedAt, Status, Details) VALUES (?, ?, ?, ?, ?)</code></td><td>Persists the outcome of each batch execution cycle, including per-service success flags and overall status</td></tr>
+</tbody></table></div>
+<p>Transaction management: each INSERT opens a new <code>DriverManager.getConnection()</code> and closes it in a <code>finally</code> block. No explicit transaction boundary or rollback is configured; JDBC auto-commit applies.</p>
+<h2 id="caching-strategy">Caching Strategy</h2>
+<p>No caching layer is used. The application has no <code>@Cacheable</code>, Redis, EhCache, Caffeine, or in-memory map caching. Each batch run reads configuration from properties/env at startup and interacts with SQL Server only for write operations.</p>
+<h2 id="data-ownership-boundaries">Data Ownership Boundaries</h2>
+<p>ZavaBatchScheduler owns the <code>BatchRunLog</code> table as a write-only audit log. No other service in the observed codebase is expected to write to this table. Downstream microservices (<code>zavainterestcalculator</code>, <code>zavastatementservice</code>, <code>zavaledger</code>) manage their own data stores independently; this scheduler has no direct database access to those services and coordinates with them solely over HTTP.</p>
+<p>The <code>ZavaBankCore</code> database is shared infrastructure — the <code>BatchRunLog</code> table co-exists alongside tables owned by other banking services. There is no schema-per-service isolation or logical namespace separation visible from this project. Cross-service data access is avoided: the scheduler reads no data from tables owned by downstream services.</p>
+<h3 id="data-classification-sensitivity">Data Classification &amp; Sensitivity</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Entity</th><th>Sensitive Fields</th><th>Classification</th><th>Controls in Place</th></tr></thead><tbody>
+<tr><td><code>BatchRunLog</code></td><td><code>Details</code> (contains per-service boolean outcomes only)</td><td>None (operational metadata)</td><td>No encryption-at-rest or masking required</td></tr>
+</tbody></table></div>
+<p>No PII, PHI, or PCI data is stored or processed by this service. The <code>BatchRunLog</code> table stores only operational metadata (timestamps, run type, status flags). However, the database connection credentials (<code>db.username</code>, <code>db.password</code>) are stored in plaintext in <code>batchscheduler.properties</code> with a default value of <code>sa</code> / <code>YourStrong!Passw0rd</code>. These are overridable via environment variables but the defaults represent a security risk if the image is deployed without overrides.</p>
+</div>
+</div>
+<p class="footer">Your feedback is invaluable &mdash; <a href="https://aka.ms/ghcp-appmod/feedback">Share feedback</a></p>
+<script>
+function toggleRow(rowId, triggerRow) {
+  var detail = document.getElementById(rowId);
+  var btn = document.getElementById('btn-' + rowId);
+  if (!detail) return;
+  var visible = detail.style.display !== 'none';
+  detail.style.display = visible ? 'none' : 'table-row';
+  if (btn) btn.classList.toggle('open', !visible);
+}
+(function() {
+  var nav = document.querySelector('.tab-nav');
+  if (!nav) return;
+  nav.addEventListener('click', function(e) {
+    var btn = e.target.closest('.tab-btn');
+    if (!btn) return;
+    var targetId = btn.getAttribute('data-tab');
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+    btn.classList.add('active');
+    var panel = document.getElementById(targetId);
+    if (panel) {
+      panel.classList.add('active');
+      // Render any mermaid diagrams in this panel that haven't been processed yet
+      if (window.__mermaidReady) { window.__renderMermaidIn(panel); }
+    }
+  });
+})();
+
+// ── Diagram lightbox ────────────────────────────────────────
+(function() {
+  var lightbox = document.getElementById('diagram-lightbox');
+  var inner = document.getElementById('diagram-lightbox-inner');
+  var closeBtn = document.getElementById('diagram-lightbox-close');
+  if (!lightbox || !inner || !closeBtn) return;
+
+  var scale = 1;
+  var translateX = 0;
+  var translateY = 0;
+  var isDragging = false;
+  var dragStartX = 0;
+  var dragStartY = 0;
+
+  function applyTransform() {
+    var svg = inner.querySelector('svg');
+    if (svg) {
+      svg.style.transform = 'translate(' + translateX + 'px, ' + translateY + 'px) scale(' + scale + ')';
+      svg.style.transformOrigin = 'center center';
+      svg.style.transition = 'none';
+    }
+  }
+
+  function resetTransform() {
+    scale = 1; translateX = 0; translateY = 0;
+    applyTransform();
+  }
+
+  function openLightbox(svgEl) {
+    inner.innerHTML = svgEl.outerHTML;
+    var injected = inner.querySelector('svg');
+    if (injected) {
+      injected.removeAttribute('width');
+      injected.removeAttribute('height');
+      injected.style.cursor = 'grab';
+    }
+    resetTransform();
+    lightbox.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLightbox() {
+    lightbox.classList.remove('open');
+    inner.innerHTML = '';
+    document.body.style.overflow = '';
+    resetTransform();
+  }
+
+  inner.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    var delta = e.deltaY > 0 ? 0.9 : 1.1;
+    scale = Math.min(Math.max(scale * delta, 0.3), 8);
+    applyTransform();
+  }, { passive: false });
+
+  inner.addEventListener('mousedown', function(e) {
+    if (e.button !== 0) return;
+    isDragging = true;
+    dragStartX = e.clientX - translateX;
+    dragStartY = e.clientY - translateY;
+    var svg = inner.querySelector('svg');
+    if (svg) { svg.style.cursor = 'grabbing'; }
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (!isDragging) return;
+    translateX = e.clientX - dragStartX;
+    translateY = e.clientY - dragStartY;
+    applyTransform();
+  });
+
+  document.addEventListener('mouseup', function() {
+    if (!isDragging) return;
+    isDragging = false;
+    var svg = inner.querySelector('svg');
+    if (svg) { svg.style.cursor = 'grab'; }
+  });
+
+  inner.addEventListener('dblclick', function() { resetTransform(); });
+
+  document.addEventListener('click', function(e) {
+    var card = e.target.closest('.mermaid');
+    if (!card) return;
+    if (e.target.closest('.diagram-lightbox-close')) return;
+    var svg = card.querySelector('svg');
+    if (svg) { openLightbox(svg); }
+  });
+
+  closeBtn.addEventListener('click', closeLightbox);
+
+  lightbox.addEventListener('click', function(e) {
+    if (e.target === lightbox) { closeLightbox(); }
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') { closeLightbox(); }
+  });
+})();
+
+var _currentTarget = '';
+
+function toggleMultiSelect(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  // Close others
+  document.querySelectorAll('.multi-select.open').forEach(function(ms) { if (ms.id !== id) ms.classList.remove('open'); });
+  el.classList.toggle('open');
+}
+
+// Close dropdowns on outside click
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.multi-select')) {
+    document.querySelectorAll('.multi-select.open').forEach(function(ms) { ms.classList.remove('open'); });
+  }
+});
+
+function getMultiSelectValues(msId) {
+  var el = document.getElementById(msId);
+  if (!el) return [];
+  var checked = el.querySelectorAll('input[type=checkbox]:checked');
+  var vals = [];
+  for (var i = 0; i < checked.length; i++) vals.push(checked[i].value);
+  return vals;
+}
+
+function onMultiSelectChange(msId, label) {
+  var el = document.getElementById(msId);
+  if (!el) return;
+  var vals = getMultiSelectValues(msId);
+  var total = el.querySelectorAll('input[type=checkbox]').length;
+  var btn = el.querySelector('.multi-select-btn');
+  if (btn) {
+    btn.textContent = vals.length > 0 && vals.length < total ? label + ' (' + vals.length + ')' : label;
+  }
+  applyFilters();
+}
+
+function applyFilters() {
+  var selectedDomains = getMultiSelectValues('domain-ms');
+  var selectedCrits = getMultiSelectValues('criticality-ms');
+
+  // Domain filter: show/hide entire sections (empty = show all)
+  var sections = document.querySelectorAll('.issue-section');
+  for (var i = 0; i < sections.length; i++) {
+    var domain = sections[i].getAttribute('data-domain');
+    sections[i].style.display = (selectedDomains.length === 0 || selectedDomains.indexOf(domain) >= 0) ? '' : 'none';
+  }
+
+  // Row-level filtering: respect target + criticality
+  var rows = document.querySelectorAll('.issue-row');
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    var section = row.closest('.issue-section');
+    if (section && section.style.display === 'none') {
+      row.style.display = 'none';
+      var next = row.nextElementSibling;
+      if (next && next.classList.contains('detail-row')) next.style.display = 'none';
+      continue;
+    }
+
+    // Check target filter
+    var show = true;
+    if (_currentTarget && row.hasAttribute('data-targets')) {
+      var targetsStr = row.getAttribute('data-targets');
+      if (targetsStr && targetsStr !== '{}') {
+        try {
+          var targets = JSON.parse(targetsStr);
+          if (Object.keys(targets).length > 0 && !targets[_currentTarget]) {
+            show = false;
+          }
+        } catch(e) {}
+      }
+    }
+
+    // Check criticality filter
+    if (show && selectedCrits.length > 0) {
+      var crit = row.getAttribute('data-criticality');
+      if (selectedCrits.indexOf(crit) < 0) show = false;
+    }
+
+    row.style.display = show ? '' : 'none';
+    var nextRow = row.nextElementSibling;
+    if (nextRow && nextRow.classList.contains('detail-row')) {
+      if (!show) nextRow.style.display = 'none';
+    }
+  }
+}
+
+function clearAllFilters() {
+  document.querySelectorAll('.multi-select input[type=checkbox]').forEach(function(cb) { cb.checked = false; });
+  var domainBtn = document.querySelector('#domain-ms .multi-select-btn');
+  if (domainBtn) domainBtn.textContent = 'Domain';
+  var critBtn = document.querySelector('#criticality-ms .multi-select-btn');
+  if (critBtn) critBtn.textContent = 'Criticality';
+  applyFilters();
+}
+
+function onTargetChange(targetId) {
+  _currentTarget = targetId;
+  var rows = document.querySelectorAll('.issue-row[data-targets]');
+  var totalEffort = 0;
+  var domainCrits = {}; // domain -> {mandatory:0, potential:0, optional:0}
+
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    var targets = JSON.parse(row.getAttribute('data-targets'));
+    var section = row.closest('.issue-section');
+    var domain = section ? section.getAttribute('data-domain') : '';
+
+    if (!targets || Object.keys(targets).length === 0) {
+      // No target data (e.g. security) — always show
+      var sp = parseFloat(row.querySelector('.sp-cell').textContent) || 0;
+      totalEffort += sp;
+      if (!domainCrits[domain]) domainCrits[domain] = {mandatory:0,potential:0,optional:0};
+      var crit = row.getAttribute('data-criticality') || 'optional';
+      domainCrits[domain][crit] = (domainCrits[domain][crit] || 0) + 1;
+      continue;
+    }
+
+    var override = targets[targetId];
+    if (!override) {
+      // Issue doesn't apply to this target
+      continue;
+    }
+
+    // Apply severity override
+    var newSeverity = (override.severity || row.getAttribute('data-default-severity') || '').toLowerCase();
+    row.setAttribute('data-criticality', newSeverity);
+    var critCell = row.querySelector('.crit-cell');
+    if (critCell) {
+      var critText = newSeverity === 'mandatory' ? 'Mandatory' : newSeverity === 'potential' ? 'Potential' : 'Optional';
+      var cssClass = newSeverity === 'mandatory' ? 'crit-square-mandatory' : newSeverity === 'potential' ? 'crit-square-potential' : 'crit-square-optional';
+      critCell.innerHTML = '<span class="crit-label"><span class="crit-square ' + cssClass + '"></span>' + critText + '</span>';
+    }
+
+    // Apply effort override
+    var newEffort = override.effort !== undefined ? override.effort : parseFloat(row.getAttribute('data-default-effort')) || 0;
+    var spCell = row.querySelector('.sp-cell');
+    if (spCell) spCell.textContent = newEffort;
+    totalEffort += newEffort;
+
+    if (!domainCrits[domain]) domainCrits[domain] = {mandatory:0,potential:0,optional:0};
+    domainCrits[domain][newSeverity] = (domainCrits[domain][newSeverity] || 0) + 1;
+  }
+
+  // Also add security findings effort (they don't have per-target data)
+  var secSection = document.querySelector('.issue-section[data-domain="security"]');
+  if (secSection) {
+    var secRows = secSection.querySelectorAll('.issue-row');
+    for (var j = 0; j < secRows.length; j++) {
+      if (!secRows[j].hasAttribute('data-targets') || secRows[j].getAttribute('data-targets') === '') {
+        var sp = parseFloat(secRows[j].querySelector('.sp-cell').textContent) || 0;
+        totalEffort += sp;
+        if (!domainCrits['security']) domainCrits['security'] = {mandatory:0,potential:0,optional:0};
+        var sc = secRows[j].getAttribute('data-criticality') || 'optional';
+        domainCrits['security'][sc] = (domainCrits['security'][sc] || 0) + 1;
+      }
+    }
+  }
+
+  // Update effort display
+  var label = totalEffort < 20 ? 'S' : totalEffort < 50 ? 'M' : totalEffort < 100 ? 'L' : 'XL';
+  var effortEl = document.getElementById('effort-display');
+  if (effortEl) effortEl.textContent = label + ' (total story points: ' + totalEffort + ')';
+
+  // Update donut charts
+  updateDonuts(domainCrits);
+
+  // Re-apply domain/criticality filters
+  applyFilters();
+}
+
+function updateDonuts(domainCrits) {
+  var container = document.getElementById('donut-container');
+  if (!container) return;
+  container.innerHTML = '';
+  var domainNames = {'cloud-readiness':'Cloud Readiness','java-upgrade':'Java Upgrade','dotnet-upgrade':'DotNET Upgrade','security':'Security'};
+  var domainOrder = ['cloud-readiness','java-upgrade','dotnet-upgrade','security'];
+  for (var d = 0; d < domainOrder.length; d++) {
+    var key = domainOrder[d];
+    var c = domainCrits[key];
+    if (!c || (c.mandatory + c.potential + c.optional) === 0) continue;
+    var total = c.mandatory + c.potential + c.optional;
+    var div = document.createElement('div');
+    div.className = 'domain-summary-item';
+    div.innerHTML = buildDonutSvg(c.mandatory, c.potential, c.optional) +
+      '<h3>' + domainNames[key] + '</h3>' +
+      '<div class="count">' + total + ' issue' + (total !== 1 ? 's' : '') + '</div>';
+    container.appendChild(div);
+  }
+}
+
+function buildDonutSvg(m, p, o) {
+  var total = m + p + o;
+  if (total === 0) return '<svg viewBox="0 0 100 100" width="100" height="100" style="display:block;margin:0 auto;"><circle cx="50" cy="50" r="35" fill="none" stroke="#d0d7de" stroke-width="15" opacity="0.5"/></svg>';
+  var r = 35, circ = 2 * Math.PI * r, offset = 0;
+  var svg = '<svg viewBox="0 0 100 100" width="100" height="100" style="display:block;margin:0 auto;transform:rotate(-90deg);">';
+  var segs = [{c:m,color:'var(--color-mandatory)'},{c:p,color:'var(--color-potential)'},{c:o,color:'var(--color-optional)'}];
+  for (var i = 0; i < segs.length; i++) {
+    if (segs[i].c === 0) continue;
+    var segLen = (segs[i].c / total) * circ;
+    var gap = total > segs[i].c ? 1.5 : 0;
+    var drawLen = Math.max(segLen - gap, 0.5);
+    svg += '<circle cx="50" cy="50" r="' + r + '" fill="none" stroke="' + segs[i].color + '" stroke-width="15" stroke-dasharray="' + drawLen.toFixed(2) + ' ' + circ.toFixed(2) + '" stroke-dashoffset="' + (-offset).toFixed(2) + '"/>';
+    offset += segLen;
+  }
+  svg += '</svg>';
+  return svg;
+}
+</script>
+<script>document.addEventListener('DOMContentLoaded', function() { onTargetChange('azure-aks'); });</script>
+</div></body></html>

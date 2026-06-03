@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Assessment - ZavaAuditWorker</title>
+<style>
+:root {
+  --bg-primary: #ffffff;
+  --bg-card: #f8f9fa;
+  --bg-page: #f0f1f3;
+  --text-primary: #24292f;
+  --text-secondary: #57606a;
+  --text-muted: #6b7280;
+  --border-color: #d0d7de;
+  --border-light: #e1e4e8;
+  --link-color: #2563eb;
+  --color-mandatory: #E3008C;
+  --color-potential: #637CEF;
+  --color-optional: #A19F9D;
+  --font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+  --font-mono: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-family); font-size: 13px; color: var(--text-primary); background: var(--bg-primary); line-height: 1.5; margin: 0; padding: 0; }
+a { color: var(--link-color); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Page layout ───────────────────────────────────────────── */
+.main { margin: 0; padding: 24px 32px; background: var(--bg-primary); }
+.back-link { color: var(--text-muted); font-size: 13px; margin-bottom: 16px; display: block; }
+h1 { font-weight: 600; font-size: 20px; color: var(--text-primary); margin-bottom: 20px; }
+
+/* ── Report cards (matches VS Code .vscode-report-card) ──── */
+.report-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 4px; padding: 12px; margin-bottom: 20px; }
+.report-card h2 { font-size: 14px; font-weight: 600; margin: 0; color: var(--text-primary); }
+.report-card-body { margin-top: 16px; }
+
+/* ── Component Information (two-column) ────────────────── */
+.app-info-container { display: flex; gap: 8px; flex-wrap: wrap; }
+.app-info-column { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 8px; }
+.app-info-row { display: flex; align-items: baseline; }
+.app-info-label { width: 136px; flex-shrink: 0; font-weight: 600; color: var(--text-primary); }
+.app-info-value { flex: 1; color: var(--text-primary); }
+
+/* ── Issue Summary (pie charts + legend) ─────────────────── */
+.cards-container { display: flex; align-items: stretch; gap: 20px; flex-wrap: wrap; }
+.issue-summary-card { flex: 2; }
+.domain-summary-container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-around; }
+.domain-summary-item { flex: 1; min-width: 120px; text-align: center; padding: 0 16px; border-right: 1px solid var(--border-light); }
+.domain-summary-item:last-child { border-right: none; }
+.domain-summary-item h3 { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-top: 8px; }
+.domain-summary-item .count { font-size: 12px; color: var(--text-secondary); }
+.criticality-legend { display: flex; flex-wrap: wrap; gap: 15px; padding-top: 12px; justify-content: center; }
+.criticality-legend .legend-item { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-secondary); }
+.legend-swatch { display: inline-block; width: 1em; height: 1em; border-radius: 2px; }
+
+/* ── Issue list tables ───────────────────────────────────── */
+.issue-section { margin-top: 20px; }
+.issue-section h2 { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+.issue-table { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 600px; }
+.issue-table th { text-align: left; text-transform: uppercase; font-weight: 600; font-size: calc(13px * 0.875); padding: 6px 8px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); color: var(--text-secondary); position: sticky; top: 0; z-index: 1; }
+.issue-table td { padding: 12px 8px; border-bottom: 1px solid var(--border-light); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+.col-issue { width: 55%; }
+.col-criticality { width: 25%; }
+.col-storypoint { width: 20%; }
+
+/* ── Target dropdown ─────────────────────────────────────── */
+.target-select-container { margin: 4px 0 16px 0; display: flex; align-items: center; gap: 8px; }
+.target-select-container label { font-weight: 600; color: var(--text-primary); font-size: 14px; }
+.target-select-container select { font-family: var(--font-family); font-size: 13px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-primary); color: var(--text-primary); cursor: pointer; }
+
+/* ── Filter bar ──────────────────────────────────────────── */
+.filter-bar { display: flex; flex-wrap: wrap; gap: 16px; margin: 16px 0 8px 0; align-items: center; }
+.multi-select { position: relative; display: inline-block; min-width: 140px; }
+.multi-select-btn { font-family: var(--font-family); font-size: 13px; padding: 4px 24px 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-primary); color: var(--text-primary); cursor: pointer; width: 100%; text-align: left; position: relative; white-space: nowrap; }
+.multi-select-btn::after { content: '\25BE'; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 11px; color: var(--text-secondary); }
+.multi-select-dropdown { display: none; position: absolute; top: 100%; left: 0; min-width: 100%; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 100; margin-top: 2px; }
+.multi-select.open .multi-select-dropdown { display: block; }
+.multi-select-option { display: flex; align-items: center; gap: 6px; padding: 5px 10px; cursor: pointer; font-size: 13px; white-space: nowrap; }
+.multi-select-option:hover { background: var(--bg-secondary); }
+.multi-select-option input[type=checkbox] { margin: 0; cursor: pointer; }
+.clear-filters { font-size: 12px; color: var(--link-color); cursor: pointer; margin-left: 4px; }
+
+/* ── Criticality labels (colored square + text) ──────────── */
+.crit-label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; }
+.crit-square { display: inline-block; width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.crit-square-mandatory { background: var(--color-mandatory); }
+.crit-square-potential { background: var(--color-potential); }
+.crit-square-optional { background: var(--color-optional); }
+
+/* ── Expandable rows ─────────────────────────────────────── */
+.expand-btn { background: none; border: none; cursor: pointer; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 11px; transition: transform 0.15s; padding: 0; vertical-align: middle; flex-shrink: 0; }
+.expand-btn.open { transform: rotate(90deg); }
+.issue-title-cell { display: flex; align-items: center; gap: 4px; }
+.detail-row td { padding: 0; border-bottom: 1px solid var(--border-light); white-space: normal; overflow: visible; text-overflow: clip; }
+.detail-content { display: flex; gap: 0; padding: 8px 8px 8px 32px; min-width: 0; }
+.file-list { flex: 0 0 50%; min-width: 0; overflow: hidden; }
+.file-list table { width: 100%; border-collapse: collapse; }
+.file-list th { font-size: calc(13px * 0.875); text-transform: uppercase; font-weight: 600; color: var(--text-secondary); padding: 6px 8px; border-bottom: 1px solid var(--border-color); text-align: left; height: 32px; }
+.file-list td { font-size: 13px; padding: 6px 8px; border-bottom: 1px solid var(--border-light); color: var(--text-primary); }
+.file-list .file-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px; display: block; }
+.file-list .position { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); }
+.explanation-panel { flex: 1; padding-left: 16px; min-width: 0; overflow-wrap: break-word; word-wrap: break-word; }
+.explanation-panel h4 { font-size: calc(13px * 0.875); text-transform: uppercase; font-weight: 600; color: var(--text-secondary); padding: 6px 0; border-bottom: 1px solid var(--border-color); height: 32px; margin: 0; }
+.explanation-panel p { font-size: 13px; padding: 8px 0; color: var(--text-primary); line-height: 1.6; white-space: normal; word-break: break-word; }
+
+/* ── Experimental badge ──────────────────────────────────── */
+.badge-experimental { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: #fef9c3; color: #854d0e; vertical-align: middle; margin-left: 8px; cursor: default; }
+
+/* ── Footer ──────────────────────────────────────────────── */
+.footer { text-align: center; margin-top: 24px; color: var(--text-muted); font-size: 13px; }
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 800px) {
+  .main { padding: 16px; }
+  .app-info-container { flex-direction: column; }
+  .domain-summary-container { flex-direction: column; }
+  .domain-summary-item { border-right: none; border-bottom: 1px solid var(--border-light); padding-bottom: 12px; }
+  .detail-content { flex-direction: column; }
+  .file-list { flex: none; width: 100%; }
+  .explanation-panel { padding-left: 0; padding-top: 8px; }
+}
+/* ── Tab navigation ──────────────────────────────────────── */
+.tab-nav { display: flex; gap: 0; border-bottom: 1px solid var(--border-color); margin-bottom: 28px; flex-wrap: wrap; }
+.tab-btn { background: none; border: none; border-bottom: 2px solid transparent; padding: 10px 18px; font-size: 13px; font-family: var(--font-family); color: var(--text-secondary); cursor: pointer; margin-bottom: -1px; white-space: nowrap; position: relative; }
+.tab-btn:hover { color: var(--text-primary); }
+.tab-btn.active { color: var(--link-color); border-bottom-color: var(--link-color); font-weight: 600; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── Tooltip on tab ──────────────────────────────────────── */
+.tab-btn[data-tooltip]::after { content: attr(data-tooltip); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: #24292f; color: #ffffff; font-size: 12px; font-weight: 400; padding: 6px 10px; border-radius: 4px; white-space: normal; width: max-content; max-width: 260px; text-align: center; pointer-events: none; opacity: 0; transition: opacity 0.15s; z-index: 100; }
+.tab-btn[data-tooltip]:hover::after { opacity: 1; }
+
+/* ── Fact content — prose column ─────────────────────────── */
+.fact-content { max-width: 860px; margin: 0 auto; line-height: 1.75; color: var(--text-primary); font-size: 14px; }
+.fact-content h1 { font-size: 22px; font-weight: 700; margin: 0 0 6px 0; color: var(--text-primary); letter-spacing: -0.01em; }
+.fact-content h1 + p { margin-top: 6px; color: var(--text-secondary); font-size: 14px; margin-bottom: 24px; }
+.fact-content h2 { font-size: 17px; font-weight: 700; margin: 36px 0 12px 0; padding-bottom: 6px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); letter-spacing: -0.01em; }
+.fact-content h3 { font-size: 14px; font-weight: 700; margin: 24px 0 8px 0; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; color: var(--text-secondary); }
+.fact-content p { margin: 10px 0; color: var(--text-primary); }
+.fact-content ul, .fact-content ol { margin: 10px 0 10px 22px; }
+.fact-content li { margin: 5px 0; }
+.fact-content a { color: var(--link-color); }
+.fact-content a:hover { text-decoration: underline; }
+
+/* ── Fact tables ─────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; margin: 16px 0; }
+.fact-content table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 13px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color); }
+.fact-content thead { background: var(--bg-card); }
+.fact-content th { text-align: left; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; padding: 8px 14px; border-bottom: 1px solid var(--border-color); color: var(--text-secondary); }
+.fact-content td { padding: 9px 14px; border-bottom: 1px solid var(--border-light); vertical-align: top; color: var(--text-primary); }
+.fact-content tr:last-child td { border-bottom: none; }
+.fact-content tbody tr:hover { background: #f6f8fa; }
+
+/* ── Fact code ───────────────────────────────────────────── */
+.fact-content code { font-family: var(--font-mono); font-size: 12px; background: #f0f1f3; padding: 2px 6px; border-radius: 4px; color: #c7254e; }
+.fact-content pre { background: #f6f8fa; border: 1px solid var(--border-light); border-radius: 6px; padding: 14px 16px; overflow-x: auto; margin: 14px 0; }
+.fact-content pre code { background: none; color: var(--text-primary); padding: 0; border-radius: 0; }
+.fact-content hr { border: none; border-top: 1px solid var(--border-light); margin: 28px 0; }
+.fact-content strong { font-weight: 600; }
+.fact-content em { font-style: italic; }
+.fact-content blockquote { border-left: 3px solid var(--border-color); margin: 12px 0; padding: 4px 16px; color: var(--text-secondary); }
+.fact-unavailable { padding: 32px 0; }
+.fact-unavailable h3 { font-size: 16px; font-weight: 600; color: var(--text-primary); text-transform: none; letter-spacing: 0; margin: 0 0 12px 0; }
+.fact-unavailable p { margin: 0 0 8px 0; color: var(--text-secondary); }
+.fact-unavailable ol, .fact-unavailable ul { margin: 0 0 0 22px; color: var(--text-primary); }
+.fact-unavailable li { margin: 6px 0; }
+
+/* ── Mermaid diagram card ─────────────────────────────────── */
+.mermaid { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 8px; padding: 24px 16px; margin: 20px 0; overflow-x: auto; text-align: center; cursor: pointer; position: relative; }
+.mermaid:hover { border-color: var(--border-color); }
+.mermaid svg { max-width: 100%; height: auto !important; display: inline-block; }
+.mermaid-zoom-hint { position: absolute; top: 8px; right: 10px; font-size: 11px; color: var(--text-muted); opacity: 0; transition: opacity 0.15s; pointer-events: none; }
+.mermaid:hover .mermaid-zoom-hint { opacity: 1; }
+
+/* ── Diagram lightbox ────────────────────────────────────── */
+.diagram-lightbox { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.7); backdrop-filter: blur(2px); align-items: center; justify-content: center; cursor: zoom-out; padding: 48px 32px; }
+.diagram-lightbox.open { display: flex; }
+.diagram-lightbox-inner { background: #ffffff; border-radius: 10px; padding: 32px; width: 88vw; max-height: 88vh; overflow: hidden; cursor: default; box-shadow: 0 24px 64px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; }
+.diagram-lightbox-inner svg { width: 100% !important; height: auto !important; max-height: 76vh; display: block; }
+.diagram-lightbox-close { position: fixed; top: 20px; right: 24px; background: #ffffff; border: none; border-radius: 50%; width: 36px; height: 36px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-primary); box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 1001; }
+.diagram-lightbox-close:hover { background: var(--bg-card); }
+.diagram-lightbox-hint { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.55); color: #ffffff; font-size: 12px; padding: 6px 14px; border-radius: 20px; pointer-events: none; white-space: nowrap; z-index: 1001; }
+</style>
+<script>
+window.__mermaidPending = [];
+window.__mermaidReady = false;
+window.__renderMermaidIn = function(container) {
+  // Until the real implementation overrides this (after the ES module import
+  // resolves), just queue the container so we can render it later.
+  if (container) { window.__mermaidPending.push(container); }
+};
+</script>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+mermaid.initialize({ startOnLoad: false, theme: 'default', flowchart: { useMaxWidth: true }, sequence: { useMaxWidth: true } });
+
+// Real implementation: actually run mermaid on the unprocessed diagrams in the
+// given container (only ones not already rendered). Adds a "Click to expand"
+// hint span after each successful render so the lightbox affordance is
+// discoverable.
+window.__renderMermaidIn = function(container) {
+  var nodes = container ? container.querySelectorAll('.mermaid:not([data-processed])') : [];
+  if (nodes.length > 0) {
+    mermaid.run({ nodes: Array.from(nodes) }).then(function() {
+      nodes.forEach(function(node) {
+        if (!node.querySelector('.mermaid-zoom-hint')) {
+          var hint = document.createElement('span');
+          hint.className = 'mermaid-zoom-hint';
+          hint.textContent = 'Click to expand';
+          node.appendChild(hint);
+        }
+      });
+    });
+  }
+};
+
+// Drain any containers that were queued by the shim while mermaid was loading.
+// Use a Set to dedupe in case a container was both queued and is also the
+// initial-active panel below.
+var drained = new Set();
+(window.__mermaidPending || []).forEach(function(c) {
+  if (!drained.has(c)) { drained.add(c); window.__renderMermaidIn(c); }
+});
+window.__mermaidPending = [];
+window.__mermaidReady = true;
+
+// Render diagrams visible on initial load (the active tab panel(s) may not have
+// been queued by anyone — DOMContentLoaded handlers run before this if the
+// module is cached, after this if it's not, so handle both cases here).
+function renderActivePanels() {
+  document.querySelectorAll('.tab-panel.active').forEach(function(p) {
+    if (!drained.has(p)) { drained.add(p); window.__renderMermaidIn(p); }
+  });
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', renderActivePanels);
+} else {
+  renderActivePanels();
+}
+</script>
+</head><body>
+<div id="diagram-lightbox" class="diagram-lightbox" role="dialog" aria-modal="true">
+  <button class="diagram-lightbox-close" id="diagram-lightbox-close" aria-label="Close">&#x2715;</button>
+  <div class="diagram-lightbox-hint">Scroll to zoom &nbsp;·&nbsp; Drag to pan &nbsp;·&nbsp; Double-click to reset</div>
+  <div class="diagram-lightbox-inner" id="diagram-lightbox-inner"></div>
+</div>
+<div class="main">
+<a class="back-link" href="../../index.html">&#8592; Back to aggregate dashboard</a>
+<h1>ZavaAuditWorker</h1>
+<div class="report-card">
+  <h2>Component Information</h2>
+  <div class="report-card-body">
+    <div class="app-info-container">
+      <div class="app-info-column">
+        <div class="app-info-row"><span class="app-info-label">Component Name</span><span class="app-info-value">ZavaAuditWorker</span></div>
+        <div class="app-info-row"><span class="app-info-label">Repository</span><span class="app-info-value">ZavaAuditWorker</span></div>
+        <div class="app-info-row"><span class="app-info-label">Application</span><span class="app-info-value">ZavaAuditWorker</span></div>
+      </div>
+      <div class="app-info-column">
+        <div class="app-info-row"><span class="app-info-label">Effort</span><span class="app-info-value" id="effort-display">S (total story points: 6)</span></div>
+        <div class="app-info-row"><span class="app-info-label">Build Tools</span><span class="app-info-value">MSBuild</span></div>
+        <div class="app-info-row"><span class="app-info-label">Frameworks</span><span class="app-info-value">.NETFramework,Version=v4.8</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<nav class="tab-nav">
+  <button class="tab-btn active" data-tab="tab-issues" data-tooltip="Issues detected in the source code">Issues</button>
+  <button class="tab-btn" data-tab="tab-arch" data-tooltip="How the app&#39;s layers connect — from UI to data.">Architecture</button>
+  <button class="tab-btn" data-tab="tab-api" data-tooltip="Endpoints exposed by this app and how services communicate.">API Contracts</button>
+  <button class="tab-btn" data-tab="tab-config" data-tooltip="Environment settings, runtime profiles, and deployment manifests.">Configuration</button>
+  <button class="tab-btn" data-tab="tab-workflows" data-tooltip="Domain entities and the core flows users move through.">Business Workflows</button>
+  <button class="tab-btn" data-tab="tab-deps" data-tooltip="Libraries and frameworks this app depends on, grouped by category.">Dependencies</button>
+  <button class="tab-btn" data-tab="tab-data" data-tooltip="Database schema, entity relationships, and persistence behavior.">Data Model</button>
+</nav>
+<div id="tab-issues" class="tab-panel active">
+<div class="target-select-container">
+  <label for="target-select">Target Compute Service:</label>
+  <select id="target-select" onchange="onTargetChange(this.value)">
+    <option value="AppService.Windows">Azure App Service</option>
+    <option value="AppService.Linux">Azure Kubernetes Service</option>
+    <option value="AKS.Linux">Azure Container Apps</option>
+    <option value="AKS.Windows">Azure App Service Container</option>
+    <option value="ACA">Azure App Service Managed Instance</option>
+  </select>
+</div>
+<div class="report-card">
+  <h2>Issue Summary</h2>
+  <div class="report-card-body">
+    <div class="domain-summary-container" id="donut-container">
+      <div class="domain-summary-item">
+<svg viewBox="0 0 100 100" width="100" height="100" style="display:block;margin:0 auto;transform:rotate(-90deg);">
+  <circle cx="50" cy="50" r="35" fill="none" stroke="var(--color-optional)" stroke-width="15" stroke-dasharray="219.91 219.91" stroke-dashoffset="-0.00"/>
+</svg>
+
+        <h3>Cloud Readiness</h3>
+        <div class="count">2 issues</div>
+      </div>
+      <div class="domain-summary-item">
+<svg viewBox="0 0 100 100" width="100" height="100" style="display:block;margin:0 auto;transform:rotate(-90deg);">
+  <circle cx="50" cy="50" r="35" fill="none" stroke="var(--color-mandatory)" stroke-width="15" stroke-dasharray="219.91 219.91" stroke-dashoffset="-0.00"/>
+</svg>
+
+        <h3>DotNET Upgrade</h3>
+        <div class="count">2 issues</div>
+      </div>
+    </div>
+    <div class="criticality-legend">
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--color-mandatory)"></span>Mandatory</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--color-potential)"></span>Potential</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--color-optional)"></span>Optional</div>
+    </div>
+  </div>
+</div>
+<div class="filter-bar" id="filter-bar">
+  <div class="multi-select" id="domain-ms">
+    <button class="multi-select-btn" onclick="toggleMultiSelect('domain-ms')">Domain</button>
+    <div class="multi-select-dropdown">
+      <label class="multi-select-option"><input type="checkbox" value="cloud-readiness" onchange="onMultiSelectChange('domain-ms','Domain')"/> Cloud Readiness</label>
+      <label class="multi-select-option"><input type="checkbox" value="dotnet-upgrade" onchange="onMultiSelectChange('domain-ms','Domain')"/> DotNET Upgrade</label>
+    </div>
+  </div>
+  <div class="multi-select" id="criticality-ms">
+    <button class="multi-select-btn" onclick="toggleMultiSelect('criticality-ms')">Criticality</button>
+    <div class="multi-select-dropdown">
+      <label class="multi-select-option"><input type="checkbox" value="mandatory" onchange="onMultiSelectChange('criticality-ms','Criticality')"/> Mandatory</label>
+      <label class="multi-select-option"><input type="checkbox" value="optional" onchange="onMultiSelectChange('criticality-ms','Criticality')"/> Optional</label>
+    </div>
+  </div>
+  <a class="clear-filters" href="javascript:void(0)" onclick="clearAllFilters()">Clear all</a>
+</div>
+<div class="issue-section" data-domain="cloud-readiness">
+  <h2>Cloud Readiness</h2>
+  <table class="issue-table">
+    <colgroup><col class="col-issue"/><col class="col-criticality"/><col class="col-storypoint"/></colgroup>
+    <thead><tr><th>Issue Category</th><th>Criticality</th><th>Story Point</th></tr></thead>
+    <tbody>
+    <tr class="issue-row" data-criticality="optional" data-targets='{"AppService.Windows":{"effort":3,"severity":"optional"},"AppService.Linux":{"effort":3,"severity":"optional"},"AKS.Linux":{"effort":3,"severity":"optional"},"AKS.Windows":{"effort":3,"severity":"optional"},"ACA":{"effort":3,"severity":"optional"},"AppServiceContainer.Linux":{"effort":3,"severity":"optional"},"AppServiceContainer.Windows":{"effort":3,"severity":"optional"},"AppServiceManagedInstance.Windows":{"effort":3,"severity":"mandatory"}}' data-default-effort="3" data-default-severity="optional" data-rule="Security.0003" onclick="toggleRow('row-cloudreadiness-0', this)" style="cursor:pointer;">
+      <td style="white-space:normal;"><div class="issue-title-cell"><button class="expand-btn" id="btn-row-cloudreadiness-0">&#x276F;</button> Hardcoded sensitive data detected</div></td>
+      <td class="crit-cell"><span class="crit-label"><span class="crit-square crit-square-optional"></span>Optional</span></td>
+      <td class="sp-cell">3</td>
+    </tr>
+    <tr class="detail-row" id="row-cloudreadiness-0" style="display:none;">
+      <td colspan="3">
+        <div class="detail-content">
+          <div class="file-list">
+            <table><colgroup><col style="width:70%"/><col style="width:30%"/></colgroup>
+            <thead><tr><th>File</th><th>Position</th></tr></thead><tbody>
+            <tr><td><span class="file-path" title="workspace/puicchan/ZavaAuditWorker/app.config">workspace/puicchan/ZavaAuditWorker/app.config</span></td><td><span class="position"></span></td></tr>
+            <tr><td><span class="file-path" title="workspace/puicchan/ZavaAuditWorker/Program.cs">workspace/puicchan/ZavaAuditWorker/Program.cs</span></td><td><span class="position">Line 78, Col 34</span></td></tr>
+            <tr><td><span class="file-path" title="workspace/puicchan/ZavaAuditWorker/Program.cs">workspace/puicchan/ZavaAuditWorker/Program.cs</span></td><td><span class="position">Line 78, Col 55</span></td></tr>
+            <tr><td><span class="file-path" title="workspace/puicchan/ZavaAuditWorker/Program.cs">workspace/puicchan/ZavaAuditWorker/Program.cs</span></td><td><span class="position">Line 98, Col 33</span></td></tr>
+            <tr><td><span class="file-path" title="workspace/puicchan/ZavaAuditWorker/Program.cs">workspace/puicchan/ZavaAuditWorker/Program.cs</span></td><td><span class="position">Line 97, Col 127</span></td></tr>
+            <tr><td><span class="file-path" title="workspace/puicchan/ZavaAuditWorker/Program.cs">workspace/puicchan/ZavaAuditWorker/Program.cs</span></td><td><span class="position">Line 97, Col 76</span></td></tr>
+            </tbody></table>
+          </div>
+          <div class="explanation-panel">
+            <h4>Explanation</h4>
+            <div><p>Hardcoded sensitive data detected.</p><p>If you are targeting Managed Instance on Azure App Service, externalize secrets to Key Vault/App Configuration; use managed identity instead of passwords or embedded connection strings.</p><p>While if targeting other Azure compute services:</p><p>Avoid placing sensitive data such as passwords, ids, tokens etc., directly in config files and code since it compromises the security of your application.</p><p>Use Azure App Configuration or Azure KeyVault to store secrets.</p></div>
+          </div>
+        </div>
+      </td>
+    </tr>
+    <tr class="issue-row" data-criticality="optional" data-targets='{"AppService.Windows":{"effort":3,"severity":"optional"},"AppService.Linux":{"effort":3,"severity":"optional"},"AKS.Linux":{"effort":3,"severity":"optional"},"AKS.Windows":{"effort":3,"severity":"optional"},"ACA":{"effort":3,"severity":"optional"},"AppServiceContainer.Linux":{"effort":3,"severity":"optional"},"AppServiceContainer.Windows":{"effort":3,"severity":"optional"},"AppServiceManagedInstance.Windows":{"effort":3,"severity":"optional"}}' data-default-effort="3" data-default-severity="optional" data-rule="Security.0002" onclick="toggleRow('row-cloudreadiness-1', this)" style="cursor:pointer;">
+      <td style="white-space:normal;"><div class="issue-title-cell"><button class="expand-btn" id="btn-row-cloudreadiness-1">&#x276F;</button> Connection strings without configuration builders detected</div></td>
+      <td class="crit-cell"><span class="crit-label"><span class="crit-square crit-square-optional"></span>Optional</span></td>
+      <td class="sp-cell">3</td>
+    </tr>
+    <tr class="detail-row" id="row-cloudreadiness-1" style="display:none;">
+      <td colspan="3">
+        <div class="detail-content">
+          <div class="file-list">
+            <table><colgroup><col style="width:70%"/><col style="width:30%"/></colgroup>
+            <thead><tr><th>File</th><th>Position</th></tr></thead><tbody>
+            <tr><td><span class="file-path" title="workspace/puicchan/ZavaAuditWorker/app.config">workspace/puicchan/ZavaAuditWorker/app.config</span></td><td><span class="position"></span></td></tr>
+            </tbody></table>
+          </div>
+          <div class="explanation-panel">
+            <h4>Explanation</h4>
+            <div><p>Connection strings without configuration builders detected.  </p><p> Keeping connection strings directly in the app is not the best practice and might introduce security risks, increased maintenance, scalability challenges or compliance standards (such as PCI DSS, GDPR, etc.). </p><p> Instead, it is recommended to use configuration builders to get secrets from secure sources in Azure environment.</p></div>
+          </div>
+        </div>
+      </td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class="issue-section" data-domain="dotnet-upgrade">
+  <h2>DotNET Upgrade <a href="scenarios/dotnet-version-upgrade/assessment.html" style="font-size:12px;font-weight:400;margin-left:12px;">View Details</a></h2>
+  <table class="issue-table">
+    <colgroup><col class="col-issue"/><col class="col-criticality"/><col class="col-storypoint"/></colgroup>
+    <thead><tr><th>Issue Category</th><th>Criticality</th><th>Story Point</th></tr></thead>
+    <tbody>
+    <tr class="issue-row" data-criticality="mandatory" data-targets='{}' data-default-effort="1" data-default-severity="mandatory" data-rule="Project.0001" onclick="toggleRow('row-dotnetupgrade-0', this)" style="cursor:pointer;">
+      <td style="white-space:normal;"><div class="issue-title-cell"><button class="expand-btn" id="btn-row-dotnetupgrade-0">&#x276F;</button> Project file needs to be converted to SDK-style</div></td>
+      <td class="crit-cell"><span class="crit-label"><span class="crit-square crit-square-mandatory"></span>Mandatory</span></td>
+      <td class="sp-cell">1</td>
+    </tr>
+    <tr class="detail-row" id="row-dotnetupgrade-0" style="display:none;">
+      <td colspan="3">
+        <div class="detail-content">
+          <div class="file-list">
+            <table><colgroup><col style="width:70%"/><col style="width:30%"/></colgroup>
+            <thead><tr><th>File</th><th>Position</th></tr></thead><tbody>
+            <tr><td><span class="file-path" title="ZavaAuditWorker.csproj">ZavaAuditWorker.csproj</span></td><td><span class="position"></span></td></tr>
+            </tbody></table>
+          </div>
+          <div class="explanation-panel">
+            <h4>Explanation</h4>
+            <div><p>Project file needs to be converted to SDK-style. Modern .NET framework projects require a change in the project file format and use SDK corresponding to project flavor and functionality.</p></div>
+          </div>
+        </div>
+      </td>
+    </tr>
+    <tr class="issue-row" data-criticality="mandatory" data-targets='{}' data-default-effort="1" data-default-severity="mandatory" data-rule="Project.0002" onclick="toggleRow('row-dotnetupgrade-1', this)" style="cursor:pointer;">
+      <td style="white-space:normal;"><div class="issue-title-cell"><button class="expand-btn" id="btn-row-dotnetupgrade-1">&#x276F;</button> Project&#39;s target framework(s) needs to be changed</div></td>
+      <td class="crit-cell"><span class="crit-label"><span class="crit-square crit-square-mandatory"></span>Mandatory</span></td>
+      <td class="sp-cell">1</td>
+    </tr>
+    <tr class="detail-row" id="row-dotnetupgrade-1" style="display:none;">
+      <td colspan="3">
+        <div class="detail-content">
+          <div class="file-list">
+            <table><colgroup><col style="width:70%"/><col style="width:30%"/></colgroup>
+            <thead><tr><th>File</th><th>Position</th></tr></thead><tbody>
+            <tr><td><span class="file-path" title="ZavaAuditWorker.csproj">ZavaAuditWorker.csproj</span></td><td><span class="position"></span></td></tr>
+            </tbody></table>
+          </div>
+          <div class="explanation-panel">
+            <h4>Explanation</h4>
+            <div><p>Project&#39;s target framework(s) needs to be changed to the new target framework that you selected for this upgrade.</p><p>During upgrade target framework will be adjusted to corresponding platform when applicable. In some cases project would result in multiple target frameworks after the upgrade if it was using features that now have their own platforms in modern .NET frameworks (windows, iOS, Android etc).</p></div>
+          </div>
+        </div>
+      </td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+</div><!-- #tab-issues -->
+<div id="tab-arch" class="tab-panel">
+  <div class="fact-content"><h1 id="architecture-diagram">Architecture Diagram</h1>
+<p>ZavaAuditWorker is a .NET Framework 4.8 console-based background worker service that consumes audit events from a RabbitMQ queue and persists them to a SQL Server database.</p>
+<h2 id="application-architecture">Application Architecture</h2>
+<div class="mermaid">
+flowchart TD
+    subgraph Messaging["Message Broker"]
+        RMQ[("RabbitMQ\naudit.events queue")]
+        DLX[("Dead Letter Exchange\nzava.dlx")]
+    end
+
+    subgraph App["Application Layer - .NET Framework 4.8"]
+        Worker["Worker Loop\nProgram.Main"]
+        Parser["Message Parser\nJSON / XML"]
+        Persister["Audit Persister\nSqlClient"]
+    end
+
+    subgraph Data["Data Layer"]
+        SQL[("SQL Server\nZavaBankDB")]
+        Tables["AuditLog / AuditActions\nTables"]
+    end
+
+    subgraph Config["Configuration"]
+        AppConfig["app.config /\nEnvironment Variables"]
+    end
+
+    AppConfig -->|"connection settings"| Worker
+    Worker -->|"BasicGet poll"| RMQ
+    RMQ -->|"message body"| Parser
+    Parser -->|"AuditEvent model"| Persister
+    Persister -->|"INSERT rows"| SQL
+    SQL --> Tables
+    Worker -->|"BasicNack on error"| DLX
+</div>
+<h3 id="technology-stack-summary">Technology Stack Summary</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Layer</th><th>Technology</th><th>Version</th><th>Purpose</th></tr></thead><tbody>
+<tr><td>Runtime</td><td>.NET Framework</td><td>4.8</td><td>Execution platform</td></tr>
+<tr><td>Language</td><td>C#</td><td>7.3</td><td>Implementation language</td></tr>
+<tr><td>Messaging</td><td>RabbitMQ.Client</td><td>5.2.0</td><td>AMQP message consumption</td></tr>
+<tr><td>Data Access</td><td>System.Data.SqlClient</td><td>.NET Framework built-in</td><td>SQL Server persistence</td></tr>
+<tr><td>Serialization</td><td>System.Web.Script.Serialization</td><td>.NET Framework built-in</td><td>JSON deserialization</td></tr>
+<tr><td>XML Processing</td><td>System.Xml.Linq</td><td>.NET Framework built-in</td><td>XML message parsing</td></tr>
+<tr><td>Configuration</td><td>System.Configuration</td><td>.NET Framework built-in</td><td>App settings / connection strings</td></tr>
+</tbody></table></div>
+<h3 id="data-storage-external-services">Data Storage &amp; External Services</h3>
+<p>ZavaAuditWorker depends on two external services. <strong>RabbitMQ</strong> acts as the message broker, with the worker continuously polling the <code>audit.events</code> queue via the AMQP <code>BasicGet</code> method. Failed messages are negatively acknowledged and routed to a dead letter exchange (<code>zava.dlx</code>). <strong>SQL Server</strong> (ZavaBankDB) is the persistence target; the worker supports two AuditLog schemas — a legacy schema with an <code>ActionID</code> foreign key referencing an <code>AuditActions</code> lookup table, and a modern schema with direct event columns. Both the RabbitMQ connection details and the SQL Server connection string are configurable via environment variables or <code>app.config</code> app settings.</p>
+<h3 id="key-architectural-decisions">Key Architectural Decisions</h3>
+<ul>
+<li><strong>Pull-based (polling) message consumption</strong>: The worker uses <code>BasicGet</code> with manual acknowledgment rather than a push-based consumer, giving it simple, predictable resource usage at the cost of latency.</li>
+<li><strong>Dual schema support</strong>: A runtime check (<code>HasLegacyAuditColumns</code>) detects whether the target database uses the old <code>AuditLog</code> schema and branches accordingly, enabling zero-downtime migration between schema versions.</li>
+<li><strong>Configuration layering</strong>: All settings are resolved in priority order — environment variables first, then <code>app.config</code> app settings, then hard-coded defaults — supporting both containerized and traditional deployment.</li>
+</ul>
+<h2 id="component-relationships">Component Relationships</h2>
+<div class="mermaid">
+flowchart LR
+    subgraph EntryPoint["Entry Point"]
+        Main["Program.Main\nWorker Loop"]
+    end
+
+    subgraph Config["Configuration"]
+        LoadConfig["LoadConfig()"]
+        BuildConnStr["BuildSqlConnectionString()"]
+    end
+
+    subgraph Messaging["Messaging"]
+        CreateFactory["CreateFactory()\nConnectionFactory"]
+        PollQueue["PollQueue()"]
+        EnsureQueue["EnsureQueue()"]
+    end
+
+    subgraph Parsing["Message Parsing"]
+        ParseAuditEvent["ParseAuditEvent()"]
+        ParseJson["ParseJson()\nJavaScriptSerializer"]
+        ParseXml["ParseXml()\nXDocument"]
+        AuditEvent["AuditEvent\nData Model"]
+    end
+
+    subgraph Persistence["Data Persistence"]
+        SaveAuditEvent["SaveAuditEvent()"]
+        HasLegacyCols["HasLegacyAuditColumns()"]
+        InsertLegacy["InsertLegacyAuditRow()"]
+        InsertModern["InsertModernAuditRow()"]
+        EnsureAction["EnsureAction()"]
+    end
+
+    Main -->|"initializes"| LoadConfig
+    LoadConfig -->|"builds"| BuildConnStr
+    Main -->|"calls per poll interval"| PollQueue
+    PollQueue -->|"creates"| CreateFactory
+    PollQueue -->|"validates"| EnsureQueue
+    PollQueue -->|"dispatches body"| ParseAuditEvent
+    ParseAuditEvent -->|"JSON path"| ParseJson
+    ParseAuditEvent -->|"XML path"| ParseXml
+    ParseJson -->|"produces"| AuditEvent
+    ParseXml -->|"produces"| AuditEvent
+    PollQueue -->|"persists"| SaveAuditEvent
+    SaveAuditEvent -->|"schema detection"| HasLegacyCols
+    HasLegacyCols -->|"legacy"| InsertLegacy
+    HasLegacyCols -->|"modern"| InsertModern
+    InsertLegacy -->|"lookup/insert"| EnsureAction
+</div>
+<h3 id="component-inventory">Component Inventory</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Component</th><th>Layer</th><th>Type</th><th>Responsibility</th></tr></thead><tbody>
+<tr><td><code>Program.Main</code></td><td>Entry Point</td><td>Worker Loop</td><td>Bootstraps config, manages lifecycle, drives the poll loop</td></tr>
+<tr><td><code>LoadConfig()</code></td><td>Configuration</td><td>Configuration Loader</td><td>Reads RabbitMQ/DB settings from env vars and app.config</td></tr>
+<tr><td><code>BuildSqlConnectionString()</code></td><td>Configuration</td><td>Helper</td><td>Constructs SQL Server connection string from individual env vars</td></tr>
+<tr><td><code>CreateFactory()</code></td><td>Messaging</td><td>Factory</td><td>Creates and configures a RabbitMQ <code>ConnectionFactory</code></td></tr>
+<tr><td><code>PollQueue()</code></td><td>Messaging</td><td>Consumer</td><td>Opens a channel, fetches one message, orchestrates parse + persist + ack</td></tr>
+<tr><td><code>EnsureQueue()</code></td><td>Messaging</td><td>Queue Setup</td><td>Passively declares or creates the audit queue with DLX args</td></tr>
+<tr><td><code>ParseAuditEvent()</code></td><td>Message Parsing</td><td>Dispatcher</td><td>Detects message format (JSON vs XML) and routes to parser</td></tr>
+<tr><td><code>ParseJson()</code></td><td>Message Parsing</td><td>JSON Parser</td><td>Deserializes JSON body into <code>AuditEvent</code></td></tr>
+<tr><td><code>ParseXml()</code></td><td>Message Parsing</td><td>XML Parser</td><td>Parses XML body into <code>AuditEvent</code> using XDocument</td></tr>
+<tr><td><code>AuditEvent</code></td><td>Message Parsing</td><td>Data Model</td><td>Holds event fields: EventType, ServiceName, UserId, Timestamp, Details, CorrelationId</td></tr>
+<tr><td><code>SaveAuditEvent()</code></td><td>Data Persistence</td><td>Persistence Orchestrator</td><td>Opens SQL connection and routes to legacy or modern insert path</td></tr>
+<tr><td><code>HasLegacyAuditColumns()</code></td><td>Data Persistence</td><td>Schema Detector</td><td>Queries INFORMATION_SCHEMA to determine active database schema</td></tr>
+<tr><td><code>EnsureAction()</code></td><td>Data Persistence</td><td>Lookup Helper</td><td>Finds or creates an entry in the <code>AuditActions</code> lookup table</td></tr>
+<tr><td><code>InsertLegacyAuditRow()</code></td><td>Data Persistence</td><td>Legacy Writer</td><td>Inserts into <code>AuditLog</code> using old <code>ActionID</code> foreign key schema</td></tr>
+<tr><td><code>InsertModernAuditRow()</code></td><td>Data Persistence</td><td>Modern Writer</td><td>Inserts into <code>AuditLog</code> using new direct column schema</td></tr>
+</tbody></table></div>
+</div>
+</div>
+<div id="tab-api" class="tab-panel">
+  <div class="fact-content"><h1 id="api-service-communication-contracts">API &amp; Service Communication Contracts</h1>
+<p>ZavaAuditWorker exposes no HTTP API endpoints; its entire external communication surface consists of one inbound AMQP message channel (RabbitMQ) and one outbound SQL data channel (SQL Server).</p>
+<h2 id="service-catalog">Service Catalog</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Port</th><th>Category</th><th>Purpose</th></tr></thead><tbody>
+<tr><td>ZavaAuditWorker</td><td>N/A (no HTTP listener)</td><td>Business</td><td>Background worker that polls a RabbitMQ queue for audit events and persists them to SQL Server</td></tr>
+<tr><td>RabbitMQ</td><td>5672 (AMQP)</td><td>Infrastructure</td><td>Message broker providing the <code>audit.events</code> queue and <code>zava.dlx</code> dead letter exchange</td></tr>
+<tr><td>SQL Server</td><td>1433 (TDS)</td><td>Infrastructure</td><td>Relational database storing audit log records in the <code>ZavaBankDB</code> database</td></tr>
+</tbody></table></div>
+<h2 id="api-endpoints-inventory">API Endpoints Inventory</h2>
+<p>No HTTP/REST API endpoints are present. ZavaAuditWorker is a headless background worker with no web framework and no listening socket.</p>
+<p>&gt; Note: Inter-service communication is entirely message-driven (AMQP) and database-driven (ADO.NET). See the Communication Patterns section for details.</p>
+<h2 id="management-observability-endpoints">Management &amp; Observability Endpoints</h2>
+<p>No management or observability endpoints are configured. There is no health check route, no Swagger/OpenAPI surface, no Actuator-style endpoint, and no metrics export endpoint. All diagnostic output is written to stdout via <code>Console.WriteLine</code>.</p>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Endpoint</th><th>Custom Metrics</th></tr></thead><tbody>
+<tr><td>ZavaAuditWorker</td><td>None</td><td>None</td></tr>
+</tbody></table></div>
+<h2 id="dtos-contracts">DTOs &amp; Contracts</h2>
+<h3 id="inbound-message-contract">Inbound Message Contract</h3>
+<p>The worker accepts two message formats on the <code>audit.events</code> queue:</p>
+<ul>
+<li><strong>JSON format</strong> — a flat JSON object with the following well-known field names (case-insensitive key lookup): <code>eventType</code>/<code>EventType</code>/<code>action</code>, <code>serviceName</code>/<code>ServiceName</code>/<code>service</code>, <code>userId</code>/<code>UserId</code>/<code>userName</code>, <code>timestamp</code>/<code>Timestamp</code>, <code>correlationId</code>/<code>CorrelationId</code>/<code>requestId</code>. The full raw body is stored in the <code>Details</code>/<code>DetailsJson</code> column.</li>
+<li><strong>XML format</strong> — an XML document whose root element contains child elements <code>EventType</code>/<code>Action</code>/<code>Type</code>, <code>ServiceName</code>/<code>Service</code>, <code>UserId</code>/<code>UserName</code>, <code>Timestamp</code>, <code>CorrelationId</code>/<code>RequestId</code>. The full raw body is stored as details.</li>
+</ul>
+<h3 id="internal-data-model">Internal Data Model</h3>
+<p><code>AuditEvent</code> is the internal data transfer object produced by the parsers. See <code>data-architecture.md</code> for field-level details. The class is mutable (public fields), not a C# record or immutable type.</p>
+<p>No OpenAPI/Swagger specification, protobuf schema, or GraphQL schema exists. Serialization uses <code>System.Web.Script.Serialization.JavaScriptSerializer</code> (JSON) and <code>System.Xml.Linq.XDocument</code> (XML) — both are .NET Framework built-ins with no modern equivalents in .NET 6+.</p>
+<h2 id="communication-patterns">Communication Patterns</h2>
+<h3 id="asynchronous-amqp-inbound">Asynchronous — AMQP (Inbound)</h3>
+<p>The worker uses a <strong>pull-based (polling) consumption</strong> pattern over AMQP 0-9-1 via RabbitMQ.Client 5.2.0. On each poll cycle, the worker:</p>
+<ol>
+<li>Opens a new TCP connection and channel.</li>
+<li>Calls <code>channel.BasicGet(queue, autoAck: false)</code> — a synchronous, blocking pull.</li>
+<li>On success, processes the message and calls <code>channel.BasicAck</code>.</li>
+<li>On processing failure, calls <code>channel.BasicNack(requeue: false)</code>, routing the message to the dead letter exchange (<code>zava.dlx</code>).</li>
+</ol>
+<p>The poll interval is configurable (<code>WORKER_POLL_INTERVAL_MS</code> / <code>Worker.PollIntervalMs</code>, default 5000 ms). A new TCP connection is opened and closed every poll cycle (no persistent channel or consumer is reused).</p>
+<h3 id="synchronous-adonet-outbound">Synchronous — ADO.NET (Outbound)</h3>
+<p>Audit events are persisted via direct ADO.NET (<code>SqlConnection</code> / <code>SqlCommand</code>). There is no ORM, no connection pool configuration, and no retry logic at the data access layer.</p>
+<h3 id="resilience-patterns">Resilience Patterns</h3>
+<ul>
+<li><strong>Retry</strong>: None. Failed messages are dead-lettered immediately without retry.</li>
+<li><strong>Circuit breaker</strong>: None.</li>
+<li><strong>Timeout</strong>: No explicit timeouts are configured on the RabbitMQ connection or SQL Server commands.</li>
+<li><strong>Dead letter handling</strong>: RabbitMQ BasicNack with <code>requeue: false</code> sends failed messages to <code>zava.dlx</code>. No consumer for the dead letter exchange is present in this repository.</li>
+</ul>
+<h3 id="service-discovery">Service Discovery</h3>
+<p>No service discovery mechanism is used. RabbitMQ and SQL Server hostnames are resolved via environment variables / <code>app.config</code> configuration values — i.e., hardcoded logical names (<code>rabbitmq</code>, <code>sqlserver</code>) typically resolved by container DNS or infrastructure configuration outside this codebase.</p>
+<h3 id="security-posture">Security Posture</h3>
+<p><strong>No transport-level security (TLS) is configured.</strong> The RabbitMQ <code>ConnectionFactory</code> does not set <code>Ssl</code> properties; the SQL Server connection string contains <code>Encrypt=False;TrustServerCertificate=True</code>. Credentials (RabbitMQ username/password, SQL Server <code>sa</code> password) are supplied via environment variables or <code>app.config</code>. There is no mutual TLS, no token-based authentication between services, and no authorization layer within the worker itself. All security relies entirely on network-level isolation.</p>
+<h2 id="service-technology-matrix">Service Technology Matrix</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Web Framework</th><th>Data Access</th><th>Discovery</th><th>Gateway</th><th>Health Checks</th><th>Cache</th><th>Metrics</th></tr></thead><tbody>
+<tr><td>ZavaAuditWorker</td><td>None</td><td>ADO.NET (System.Data.SqlClient)</td><td>None</td><td>None</td><td>None</td><td>None</td><td>None (stdout only)</td></tr>
+</tbody></table></div>
+<h2 id="service-communication-sequence">Service Communication Sequence</h2>
+<div class="mermaid">
+sequenceDiagram
+    participant RMQ as "RabbitMQ\naudit.events"
+    participant Worker as "ZavaAuditWorker"
+    participant Parser as "Message Parser\n(JSON / XML)"
+    participant DB as "SQL Server\nZavaBankDB"
+    participant DLX as "Dead Letter Exchange\nzava.dlx"
+
+    loop Every PollIntervalMs (default 5000ms)
+        Worker->>RMQ: BasicGet(queue, autoAck=false)
+        alt Message available
+            RMQ-->>Worker: MessageBody + DeliveryTag
+            Worker->>Parser: ParseAuditEvent(body)
+            alt JSON format
+                Parser-->>Worker: AuditEvent (from JSON)
+            else XML format
+                Parser-->>Worker: AuditEvent (from XML)
+            end
+            Worker->>DB: Open SqlConnection
+            DB-->>Worker: Connection ready
+            Worker->>DB: SELECT COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS\nWHERE TABLE_NAME=AuditLog AND COLUMN_NAME=ActionID
+            alt Legacy schema detected
+                Worker->>DB: SELECT/INSERT AuditActions (EnsureAction)
+                DB-->>Worker: ActionID
+                Worker->>DB: INSERT INTO AuditLog (legacy columns)
+            else Modern schema
+                Worker->>DB: INSERT INTO AuditLog (modern columns)
+            end
+            DB-->>Worker: Insert success
+            Worker->>RMQ: BasicAck(deliveryTag)
+        else No message
+            RMQ-->>Worker: null (queue empty)
+        end
+    end
+
+    Worker->>RMQ: BasicNack(deliveryTag, requeue=false)
+    Note over Worker,RMQ: On any processing exception
+    RMQ-->>DLX: Route failed message
+</div>
+</div>
+</div>
+<div id="tab-config" class="tab-panel">
+  <div class="fact-content"><h1 id="configuration-externalized-settings-inventory">Configuration &amp; Externalized Settings Inventory</h1>
+<p>ZavaAuditWorker has two configuration sources — an <code>app.config</code> file (XML) with hard-coded defaults, and a runtime layer of environment variables that take precedence — with no secret manager, no profiles, and no external config server.</p>
+<h2 id="configuration-sources">Configuration Sources</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Source</th><th>Type</th><th>Path/Location</th><th>Notes</th></tr></thead><tbody>
+<tr><td><code>app.config</code></td><td>XML AppSettings</td><td><code>/app.config</code></td><td>.NET Framework <code>ConfigurationManager</code> app settings; holds all default values for RabbitMQ and database connectivity</td></tr>
+<tr><td>Environment Variables</td><td>OS / Container env</td><td>Runtime (Docker / host shell)</td><td>Take precedence over <code>app.config</code> values; primary configuration mechanism in containerized deployments</td></tr>
+<tr><td><code>Dockerfile</code></td><td>Container build script</td><td><code>/Dockerfile</code></td><td>Defines the container runtime (<code>mono:6.12</code>); no <code>ENV</code> declarations — all config must be injected at <code>docker run</code> time</td></tr>
+</tbody></table></div>
+<p>No Spring Cloud Config, Azure App Configuration, AWS AppConfig, Consul KV, HashiCorp Vault, or any other external configuration server is used.</p>
+<h2 id="build-profiles">Build Profiles</h2>
+<p>ZavaAuditWorker uses standard MSBuild configurations only. There are no custom Maven/Gradle profiles or .NET conditional compilation symbols beyond the two defaults.</p>
+<div class="table-wrap"><table><thead><tr>
+<th>Profile</th><th>Activation</th><th>Purpose</th><th>Key Properties</th></tr></thead><tbody>
+<tr><td>Debug</td><td>Default (IDE)</td><td>Development and debugging; debug symbols included, no optimization</td><td><code>DebugSymbols=true</code>, <code>DebugType=full</code>, <code>Optimize=false</code>, output to <code>bin\Debug\</code></td></tr>
+<tr><td>Release</td><td>Manual (<code>/p:Configuration=Release</code>)</td><td>Production packaging; optimized binary, PDB-only symbols</td><td><code>DebugType=pdbonly</code>, <code>Optimize=true</code>, output to <code>/app/out</code> (Dockerfile target)</td></tr>
+</tbody></table></div>
+<h2 id="runtime-profiles">Runtime Profiles</h2>
+<p>No runtime profiles are implemented. The application does not use <code>ASPNETCORE_ENVIRONMENT</code>, environment-specific config files (<code>appsettings.Development.json</code>), or any equivalent profile-switching mechanism. The same binary and the same <code>app.config</code> defaults are used in all environments; per-environment differences are achieved entirely through environment variable injection.</p>
+<div class="table-wrap"><table><thead><tr>
+<th>Profile</th><th>Activation Method</th><th>Config Files</th><th>Key Overrides</th></tr></thead><tbody>
+<tr><td>(none — single profile)</td><td>N/A</td><td><code>app.config</code></td><td>All settings overridable via environment variables at startup</td></tr>
+</tbody></table></div>
+<h2 id="properties-inventory">Properties Inventory</h2>
+<h3 id="zavaauditworker-all-settings">ZavaAuditWorker — All Settings</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Property Key (app.config)</th><th>Environment Variable(s)</th><th>Default Value</th><th>Type</th><th>Notes</th></tr></thead><tbody>
+<tr><td><code>RabbitMQ.Host</code></td><td><code>RABBITMQ_HOST</code></td><td><code>rabbitmq</code></td><td>string</td><td>RabbitMQ server hostname</td></tr>
+<tr><td><code>RabbitMQ.Port</code></td><td><code>RABBITMQ_PORT</code></td><td><code>5672</code></td><td>int</td><td>AMQP port</td></tr>
+<tr><td><code>RabbitMQ.VHost</code></td><td><code>RABBITMQ_VHOST</code></td><td><code>/zavabank</code></td><td>string</td><td>RabbitMQ virtual host</td></tr>
+<tr><td><code>RabbitMQ.User</code></td><td><code>RABBITMQ_USER</code></td><td><code>zava_app</code></td><td>string</td><td>RabbitMQ username</td></tr>
+<tr><td><code>RabbitMQ.Password</code></td><td><code>RABBITMQ_PASSWORD</code></td><td><code>zava_pass</code></td><td>string</td><td>RabbitMQ password — <strong>sensitive</strong></td></tr>
+<tr><td><code>RabbitMQ.AuditQueue</code></td><td><code>AUDIT_QUEUE</code></td><td><code>audit.events</code></td><td>string</td><td>Queue name to consume from</td></tr>
+<tr><td><code>RabbitMQ.DeadLetterExchange</code></td><td><code>RABBITMQ_DLX</code></td><td><code>zava.dlx</code></td><td>string</td><td>Dead letter exchange name for failed messages</td></tr>
+<tr><td><code>Worker.PollIntervalMs</code></td><td><code>WORKER_POLL_INTERVAL_MS</code></td><td><code>5000</code></td><td>int (ms)</td><td>Sleep interval between poll cycles</td></tr>
+<tr><td><code>Database.ConnectionString</code></td><td><code>DB_CONNECTION_STRING</code></td><td>(constructed)</td><td>string</td><td>Full SQL Server connection string; if set, overrides individual DB_* variables — <strong>sensitive</strong></td></tr>
+<tr><td><em>(constructed from parts)</em></td><td><code>DB_HOST</code> / <code>DATABASE_HOST</code></td><td><code>sqlserver</code></td><td>string</td><td>SQL Server hostname</td></tr>
+<tr><td><em>(constructed from parts)</em></td><td><code>DB_PORT</code> / <code>DATABASE_PORT</code></td><td><code>1433</code></td><td>string</td><td>SQL Server port</td></tr>
+<tr><td><em>(constructed from parts)</em></td><td><code>DB_NAME</code> / <code>DATABASE_NAME</code></td><td><code>ZavaBankDB</code></td><td>string</td><td>Database name</td></tr>
+<tr><td><em>(constructed from parts)</em></td><td><code>DB_USER</code> / <code>DATABASE_USER</code></td><td><code>sa</code></td><td>string</td><td>SQL Server login — <strong>sensitive</strong></td></tr>
+<tr><td><em>(constructed from parts)</em></td><td><code>DB_PASSWORD</code> / <code>DATABASE_PASSWORD</code></td><td><code>Zava123!</code></td><td>string</td><td>SQL Server password — <strong>sensitive</strong></td></tr>
+</tbody></table></div>
+<p>Resolution order for each setting: environment variable → <code>app.config</code> appSetting → hard-coded default constant in <code>Program.cs</code>. For the database connection, <code>DB_CONNECTION_STRING</code> (or its <code>DATABASE_*</code> alias) is checked first; if absent, the individual component variables are assembled into a connection string with <code>Encrypt=False;TrustServerCertificate=True</code>.</p>
+<h2 id="startup-parameters-resource-requirements">Startup Parameters &amp; Resource Requirements</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Runtime</th><th>Runtime Options</th><th>Memory</th><th>Instance Count</th></tr></thead><tbody>
+<tr><td>ZavaAuditWorker</td><td>Mono 6.12 (Docker)</td><td>None configured; <code>mono ZavaAuditWorker.exe</code> with no explicit heap flags</td><td>Not specified in Dockerfile or any compose/k8s manifest</td><td>1 (no scaling configuration present)</td></tr>
+</tbody></table></div>
+<p>No JVM/CLR heap settings (<code>-Xms</code>, <code>-Xmx</code>, <code>--gc-heap-*</code>), no resource limits (<code>mem_limit</code>, <code>cpus</code>), and no Kubernetes resource requests/limits are configured anywhere in this repository.</p>
+<h2 id="startup-dependency-chain">Startup Dependency Chain</h2>
+<p>No startup dependency orchestration is configured. There is no Docker Compose <code>depends_on</code>, no Kubernetes readiness probe, no <code>dockerize</code> wait-for-TCP, and no connection retry loop. If RabbitMQ or SQL Server is unavailable at startup, the first <code>PollQueue()</code> call will throw an exception; the exception is caught, logged to stdout, and the worker sleeps for <code>_pollIntervalMs</code> before retrying. This provides implicit retry behavior but with no backoff, no max-retry limit, and no structured health reporting.</p>
+<div class="table-wrap"><table><thead><tr>
+<th>Dependency</th><th>Expected Before Startup</th><th>Wait Mechanism</th><th>Timeout</th></tr></thead><tbody>
+<tr><td>RabbitMQ (<code>audit.events</code> queue)</td><td>Yes — connection fails immediately if unavailable</td><td>None (exception → sleep → retry)</td><td>None configured</td></tr>
+<tr><td>SQL Server (<code>ZavaBankDB</code>)</td><td>Yes — SQL connection fails on first message</td><td>None (exception → sleep → retry)</td><td>None configured</td></tr>
+</tbody></table></div>
+<h2 id="secrets-sensitive-configuration">Secrets &amp; Sensitive Configuration</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Secret Reference</th><th>Type</th><th>Configured In</th><th>Notes</th></tr></thead><tbody>
+<tr><td><code>RABBITMQ_PASSWORD</code> / <code>RabbitMQ.Password</code></td><td>Credential</td><td>Env var / app.config</td><td>Default <code>zava_pass</code> in app.config — <strong>hard-coded default is a security risk in production</strong></td></tr>
+<tr><td><code>DB_CONNECTION_STRING</code> / <code>Database.ConnectionString</code></td><td>Connection string</td><td>Env var / app.config</td><td>Contains embedded username and password; default includes plaintext <code>sa</code> password <code>Zava123!</code></td></tr>
+<tr><td><code>DB_PASSWORD</code> / <code>DATABASE_PASSWORD</code></td><td>Credential</td><td>Env var</td><td>Default <code>Zava123!</code> in Program.cs — <strong>hard-coded default</strong></td></tr>
+<tr><td><code>DB_USER</code> / <code>DATABASE_USER</code></td><td>Credential</td><td>Env var</td><td>Default <code>sa</code> — <strong>SA account usage is a security risk</strong></td></tr>
+</tbody></table></div>
+<p>No encryption, no secret manager (Vault, Key Vault, AWS Secrets Manager), no sealed secrets, and no DPAPI/Jasypt encryption are used. All secrets are supplied as plaintext environment variables.</p>
+<h3 id="secrets-provisioning-workflow">Secrets Provisioning Workflow</h3>
+<p>There is no automated secrets provisioning workflow. Secrets are expected to be injected as environment variables at container start time (via <code>docker run -e</code>, Docker Compose <code>environment:</code> block, or Kubernetes <code>Secret</code> / <code>env</code> injection). No managed identity, service principal, or RBAC-based secret retrieval is implemented.</p>
+<p>The default values in <code>app.config</code> and <code>Program.cs</code> contain hard-coded credentials (<code>zava_pass</code>, <code>Zava123!</code>, <code>sa</code>) that are used if environment variables are absent. These defaults should be removed before any cloud or production deployment; environment variables or a secrets manager must be used exclusively.</p>
+<h2 id="feature-flags">Feature Flags</h2>
+<p>No feature flag framework is present. There are no <code>@ConditionalOnProperty</code>-style annotations, no <code>.NET FeatureManagement</code>, no LaunchDarkly/Unleash integration, and no custom toggle mechanism. The only conditional branch at runtime is the schema detection check (<code>HasLegacyAuditColumns</code>), which is data-driven (not a configuration flag).</p>
+<div class="table-wrap"><table><thead><tr>
+<th>Flag Name</th><th>Default</th><th>Controlled By</th></tr></thead><tbody>
+<tr><td>(none)</td><td>—</td><td>—</td></tr>
+</tbody></table></div>
+<h2 id="framework-runtime-versions">Framework &amp; Runtime Versions</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Component</th><th>Version</th><th>Source</th></tr></thead><tbody>
+<tr><td>Target Framework</td><td>.NET Framework 4.8</td><td><code>ZavaAuditWorker.csproj</code> — <code>&lt;TargetFrameworkVersion&gt;v4.8&lt;/TargetFrameworkVersion&gt;</code></td></tr>
+<tr><td>C# Language</td><td>7.3</td><td><code>ZavaAuditWorker.csproj</code> — <code>&lt;LangVersion&gt;7.3&lt;/LangVersion&gt;</code></td></tr>
+<tr><td>RabbitMQ.Client</td><td>5.2.0</td><td><code>packages.config</code></td></tr>
+<tr><td>Mono (Docker runtime)</td><td>6.12</td><td><code>Dockerfile</code> — <code>FROM mono:6.12</code></td></tr>
+<tr><td>NuGet (in Docker)</td><td>(system-installed via apt)</td><td><code>Dockerfile</code> — <code>apt-get install nuget</code></td></tr>
+<tr><td>MSBuild (build tool)</td><td>Bundled with Mono 6.12</td><td><code>Dockerfile</code> — <code>msbuild ZavaAuditWorker.csproj</code></td></tr>
+<tr><td>System.Data.SqlClient</td><td>.NET Framework 4.8 built-in</td><td><code>ZavaAuditWorker.csproj</code> — <code>&lt;Reference Include=&quot;System.Data&quot; /&gt;</code></td></tr>
+<tr><td>System.Web.Extensions</td><td>.NET Framework 4.8 built-in</td><td><code>ZavaAuditWorker.csproj</code> — <code>&lt;Reference Include=&quot;System.Web.Extensions&quot; /&gt;</code></td></tr>
+<tr><td>System.Xml.Linq</td><td>.NET Framework 4.8 built-in</td><td><code>ZavaAuditWorker.csproj</code> — <code>&lt;Reference Include=&quot;System.Xml.Linq&quot; /&gt;</code></td></tr>
+</tbody></table></div>
+</div>
+</div>
+<div id="tab-workflows" class="tab-panel">
+  <div class="fact-content"><h1 id="core-business-workflows">Core Business Workflows</h1>
+<p>ZavaAuditWorker provides the audit trail collection function for ZavaBank: it continuously harvests audit events emitted by other services, normalises them, and appends them to a durable audit log for compliance and operational review.</p>
+<h2 id="domain-entities">Domain Entities</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Entity</th><th>Service / Bounded Context</th><th>Description</th><th>Key Relationships</th></tr></thead><tbody>
+<tr><td><code>AuditEvent</code> (in-flight)</td><td>Audit Collection</td><td>A normalised representation of a single audit event extracted from a RabbitMQ message. Carries the event type, originating service, user identifier, timestamp, raw payload, and correlation ID.</td><td>Produced from an inbound queue message; consumed by the persistence layer</td></tr>
+<tr><td><code>AuditLog</code></td><td>Audit Persistence</td><td>The durable audit record stored in SQL Server. Holds the same business fields as <code>AuditEvent</code> plus any schema-specific columns. Exists in two schema variants: legacy (linked to <code>AuditActions</code>) and modern (self-contained).</td><td>References <code>AuditActions</code> in legacy schema</td></tr>
+<tr><td><code>AuditActions</code></td><td>Audit Persistence (legacy)</td><td>A lookup table that categorises audit events by action name and severity. Only relevant under the legacy <code>AuditLog</code> schema.</td><td>Referenced by <code>AuditLog</code> via <code>ActionID</code> FK</td></tr>
+</tbody></table></div>
+<h2 id="service-to-domain-mapping">Service-to-Domain Mapping</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Domain Context</th><th>Owned Entities</th><th>External Dependencies</th></tr></thead><tbody>
+<tr><td>ZavaAuditWorker</td><td>Audit Trail Management</td><td><code>AuditLog</code>, <code>AuditActions</code></td><td>RabbitMQ (inbound event source), SQL Server (persistence target)</td></tr>
+<tr><td>Upstream producers (external)</td><td>Various ZavaBank domains</td><td>—</td><td>Publish audit events to RabbitMQ <code>audit.events</code> queue</td></tr>
+</tbody></table></div>
+<p>This is a single-service application. The service is the exclusive writer to the audit database; no other service in this repository reads from or writes to the audit tables.</p>
+<h2 id="primary-workflows">Primary Workflows</h2>
+<h3 id="workflow-1-audit-event-collection-and-persistence">Workflow 1: Audit Event Collection and Persistence</h3>
+<p><strong>Trigger</strong>: The worker&#39;s main loop wakes every <code>PollIntervalMs</code> (default 5 seconds).</p>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li><strong>Poll</strong> — The worker connects to RabbitMQ and issues a <code>BasicGet</code> on the <code>audit.events</code> queue.</li>
+<li><strong>Empty queue</strong> — If no message is waiting, the worker logs &quot;No audit events available&quot; and sleeps until the next poll cycle. No state change occurs.</li>
+<li><strong>Message received</strong> — The message body (a UTF-8 string) and its delivery tag are passed to the parser.</li>
+<li><strong>Format detection</strong> — The first non-whitespace character determines the parser: <code>&lt;</code> → XML path, anything else → JSON path.</li>
+<li><strong>Parse JSON</strong> — <code>JavaScriptSerializer</code> deserialises the body into a dictionary; field values are extracted by trying multiple key aliases (<code>eventType</code> / <code>EventType</code> / <code>action</code>, etc.). The full raw body is preserved as <code>DetailsJson</code>.</li>
+<li><strong>Parse XML</strong> — <code>XDocument</code> parses the body; element values are extracted by trying multiple element-name aliases. The full raw body is preserved as <code>DetailsJson</code>.</li>
+<li><strong>AuditEvent produced</strong> — Both parse paths yield a normalised <code>AuditEvent</code> with EventType, ServiceName, UserId, Timestamp, DetailsJson, and CorrelationId.</li>
+<li><strong>Schema detection</strong> — The worker queries <code>INFORMATION_SCHEMA.COLUMNS</code> to determine which AuditLog schema is active. This runs on every message.</li>
+<li><strong>Legacy schema path</strong> — If <code>ActionID</code> column is present, <code>EnsureAction</code> looks up or inserts a row in <code>AuditActions</code> for the event type, returning its <code>ActionID</code>. The audit row is then inserted into <code>AuditLog</code> with the legacy column set.</li>
+<li><strong>Modern schema path</strong> — If <code>ActionID</code> column is absent, the audit row is inserted directly into <code>AuditLog</code> using the modern column set.</li>
+<li><strong>Acknowledge</strong> — On successful persistence, <code>BasicAck</code> is sent to RabbitMQ — the message is removed from the queue permanently.</li>
+<li><strong>Dead-letter on failure</strong> — If any step from 5 through 10 throws an exception, <code>BasicNack(requeue: false)</code> is sent and the message is routed to the dead letter exchange (<code>zava.dlx</code>). The exception is logged to stdout. The worker continues to the next poll cycle.</li>
+</ol>
+<h3 id="workflow-2-worker-lifecycle-management">Workflow 2: Worker Lifecycle Management</h3>
+<p><strong>Trigger</strong>: Process start (<code>Program.Main</code>).</p>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li><strong>Load configuration</strong> — All settings are resolved from environment variables → <code>app.config</code> → code defaults.</li>
+<li><strong>Register shutdown hooks</strong> — <code>Console.CancelKeyPress</code> (Ctrl+C) and <code>AppDomain.ProcessExit</code> set a volatile <code>_keepRunning = false</code> flag.</li>
+<li><strong>Poll loop</strong> — The worker enters an infinite loop calling <code>PollQueue()</code> followed by <code>Thread.Sleep(_pollIntervalMs)</code>, repeating until <code>_keepRunning</code> is false.</li>
+<li><strong>Graceful shutdown</strong> — When <code>_keepRunning</code> becomes false (signal or <code>ProcessExit</code>), the loop exits and a shutdown message is written to stdout. Any in-progress RabbitMQ connection is closed by the <code>using</code> block in <code>PollQueue</code>.</li>
+</ol>
+<h2 id="cross-service-data-flows">Cross-Service Data Flows</h2>
+<p>ZavaAuditWorker participates in a unidirectional data flow: upstream ZavaBank services produce audit events and publish them to RabbitMQ; ZavaAuditWorker is the sole consumer. There is no request/response interaction, no gateway aggregation, and no data returned upstream.</p>
+<p>The worker does not read from any upstream service&#39;s API or database. It receives self-contained event payloads over AMQP and persists them as-is. The correlation ID embedded in each event is the only link back to upstream business transactions; the worker stores it but does not use it for cross-service lookups.</p>
+<p>If RabbitMQ is unavailable, messages accumulate in the broker (managed externally). If the worker crashes mid-processing (after <code>BasicGet</code> but before <code>BasicAck</code>), the un-acknowledged message will be re-queued by RabbitMQ according to its consumer-timeout policy (not managed by this application).</p>
+<h2 id="business-workflow-sequence">Business Workflow Sequence</h2>
+<div class="mermaid">
+sequenceDiagram
+    participant Producers as "Upstream Services\n(ZavaBank)"
+    participant RMQ as "RabbitMQ\naudit.events"
+    participant Worker as "ZavaAuditWorker"
+    participant DB as "SQL Server\nAuditLog"
+    participant DLX as "Dead Letter Exchange\nzava.dlx"
+
+    Producers->>RMQ: Publish audit event (JSON or XML)
+    Note over RMQ: Message queued
+
+    loop Every 5s (configurable)
+        Worker->>RMQ: Poll for message
+        alt Message available
+            RMQ-->>Worker: Message body + delivery tag
+
+            alt JSON format detected
+                Worker->>Worker: Parse JSON, extract fields
+            else XML format detected
+                Worker->>Worker: Parse XML, extract fields
+            end
+            Note over Worker: AuditEvent normalised
+
+            Worker->>DB: Detect active schema
+            alt Legacy schema (ActionID column exists)
+                Worker->>DB: Lookup or create action in AuditActions
+                DB-->>Worker: ActionID
+                Worker->>DB: Insert legacy AuditLog row
+            else Modern schema
+                Worker->>DB: Insert modern AuditLog row
+            end
+
+            alt Persistence succeeded
+                DB-->>Worker: Insert OK
+                Worker->>RMQ: BasicAck — remove message
+            else Persistence failed
+                Worker->>RMQ: BasicNack — do not requeue
+                RMQ-->>DLX: Route to dead letter exchange
+                Note over Worker: Log error, continue loop
+            end
+        else No message
+            RMQ-->>Worker: Empty (null)
+            Note over Worker: Log empty queue, sleep
+        end
+    end
+</div>
+<h2 id="business-rules-decision-logic">Business Rules &amp; Decision Logic</h2>
+<h3 id="validation-rules">Validation Rules</h3>
+<ul>
+<li><strong>Non-empty message body</strong>: If the raw message body is null or whitespace, <code>ParseAuditEvent</code> throws <code>InvalidOperationException(&quot;Audit message body is empty.&quot;)</code> — the message is dead-lettered.</li>
+<li><strong>Timestamp leniency</strong>: If the <code>timestamp</code> / <code>Timestamp</code> field cannot be parsed as a valid <code>DateTime</code>, the current system time is used as a fallback. No validation error is raised.</li>
+<li><strong>Missing fields</strong>: All event fields (EventType, ServiceName, UserId, CorrelationId) are optional from a parsing standpoint; unresolved fields default to empty string. No mandatory-field validation is applied before persistence.</li>
+</ul>
+<h3 id="decision-logic">Decision Logic</h3>
+<ul>
+<li><strong>Format routing</strong>: Message format is determined by the first non-whitespace character: <code>&lt;</code> → XML parser, otherwise → JSON parser. There is no <code>Content-Type</code> header inspection.</li>
+<li><strong>Schema detection</strong>: Runtime detection of the <code>AuditLog</code> schema via <code>INFORMATION_SCHEMA.COLUMNS</code> drives which INSERT branch executes. This is evaluated on every message — there is no cached result.</li>
+<li><strong>Action lookup/upsert</strong>: In the legacy path, if an <code>AuditActions</code> row for the event type does not exist, one is created automatically with <code>Severity = &#39;Info&#39;</code> and <code>Description = &#39;Auto-created by ZavaAuditWorker&#39;</code>. Unknown event types are stored as <code>&#39;UNKNOWN&#39;</code>.</li>
+</ul>
+<h3 id="state-transitions">State Transitions</h3>
+<p>The <code>AuditLog</code> record is append-only — there are no state transitions on existing records. The entity lifecycle is: Message received → Parsed → Persisted (terminal state). Dead-lettered messages do not create a database record.</p>
+<h3 id="error-handling">Error Handling</h3>
+<ul>
+<li><strong>Processing exceptions</strong> (parse failure, DB failure): Caught in <code>PollQueue</code>, logged to stdout, message is negatively acknowledged without requeue. The worker continues its loop.</li>
+<li><strong>Poll-cycle exceptions</strong> (RabbitMQ connection failure): Caught in <code>Main</code>, logged to stdout. The worker sleeps and retries.</li>
+<li><strong>Dead letter exchange</strong>: Failed messages are routed to <code>zava.dlx</code>. No dead-letter consumer is present in this repository; dead-lettered messages must be monitored and replayed externally.</li>
+</ul>
+<h3 id="audit-logging">Audit / Logging</h3>
+<p>All logging is performed via <code>Console.WriteLine</code> to stdout. Log entries include: startup confirmation, queue/host parameters, per-message delivery tags, saved event metadata (EventType, ServiceName, UserId, CorrelationId), empty-queue status, and exception messages. There is no structured logging, no log levels, no correlation ID propagation to log statements, and no audit trail of the worker&#39;s own actions.</p>
+<h3 id="authorization">Authorization</h3>
+<p>No authentication or authorization is implemented within the worker. Access to RabbitMQ and SQL Server is controlled exclusively by the credentials supplied via configuration. There is no role-based or attribute-based access control within the application logic.</p>
+</div>
+</div>
+<div id="tab-deps" class="tab-panel">
+  <div class="fact-content"><h1 id="dependency-map">Dependency Map</h1>
+<p>ZavaAuditWorker is a .NET Framework 4.8 console worker with 1 external NuGet package dependency and several .NET Framework built-in assembly references.</p>
+<h2 id="dependencies">Dependencies</h2>
+<div class="mermaid">
+flowchart LR
+    App["ZavaAuditWorker\n.NET Framework 4.8"]
+
+    subgraph Messaging["Messaging"]
+        RabbitMQ["RabbitMQ.Client v5.2.0"]
+    end
+
+    subgraph DataAccess["Database / Data Access"]
+        SqlClient["System.Data.SqlClient\n.NET Framework built-in"]
+    end
+
+    subgraph Serialization["Serialization / Utilities"]
+        JSSerializer["System.Web.Script.Serialization\n.NET Framework built-in"]
+        XmlLinq["System.Xml.Linq\n.NET Framework built-in"]
+    end
+
+    subgraph CoreFramework["Core Framework"]
+        NetFx["mscorlib / System.Core\n.NET Framework 4.8"]
+        Config["System.Configuration\n.NET Framework built-in"]
+        NetHttp["System.Net.Http\n.NET Framework built-in"]
+    end
+
+    App -->|"messaging"| Messaging
+    App -->|"persistence"| DataAccess
+    App -->|"serialization"| Serialization
+    App -->|"core"| CoreFramework
+</div>
+<h3 id="dependency-summary">Dependency Summary</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Category</th><th>Count</th><th>Key Libraries</th><th>Notes</th></tr></thead><tbody>
+<tr><td>Messaging</td><td>1</td><td>RabbitMQ.Client 5.2.0</td><td>Only external NuGet package; AMQP 0-9-1 client</td></tr>
+<tr><td>Database / Data Access</td><td>1</td><td>System.Data.SqlClient (built-in)</td><td>Legacy ADO.NET; included in .NET Framework 4.8</td></tr>
+<tr><td>Serialization / Utilities</td><td>2</td><td>System.Web.Script.Serialization, System.Xml.Linq</td><td>Both are .NET Framework built-ins; JavaScriptSerializer is deprecated in modern .NET</td></tr>
+<tr><td>Core Framework</td><td>3</td><td>mscorlib, System.Configuration, System.Net.Http</td><td>Base .NET Framework 4.8 assemblies</td></tr>
+</tbody></table></div>
+<h3 id="version-compatibility-risks">Version &amp; Compatibility Risks</h3>
+<p><strong>.NET Framework 4.8</strong> is the final version of the .NET Framework line and is in long-term maintenance mode (security fixes only, no new features). It is not cross-platform. <strong>RabbitMQ.Client 5.2.0</strong> is a significantly outdated release — the current stable series is 6.x/7.x, which introduced async-first APIs, breaking changes in the consumer model, and dropped support for older AMQPs. <strong>System.Web.Script.Serialization (JavaScriptSerializer)</strong> was deprecated in .NET Core / .NET 5+ and does not exist in the modern <code>System.Text.Json</code>-based ecosystem; migrating to modern .NET would require replacing it with <code>System.Text.Json</code> or <code>Newtonsoft.Json</code>. <strong>System.Data.SqlClient</strong> (the .NET Framework built-in namespace) has been superseded by the cross-platform <code>Microsoft.Data.SqlClient</code> NuGet package — a migration target when moving to modern .NET.</p>
+<h3 id="notable-observations">Notable Observations</h3>
+<ul>
+<li><strong>Single external dependency</strong>: The project has only one NuGet package (<code>RabbitMQ.Client</code>), keeping the dependency footprint minimal. The trade-off is heavy reliance on aging .NET Framework built-ins that have no direct equivalents in modern .NET.</li>
+<li><strong>RabbitMQ.Client 5.2.0 is end-of-branch</strong>: RabbitMQ.Client 5.x targeted .NET Framework / .NET Standard 2.0 and uses a synchronous pull model (<code>BasicGet</code>). The 6.x+ series moved to async consumers and renamed/removed several types — upgrading will require code changes beyond a version bump.</li>
+<li><strong>No logging framework</strong>: The application uses only <code>Console.WriteLine</code> for all diagnostic output. There is no structured logging (Serilog, NLog, Microsoft.Extensions.Logging), which limits observability in production environments and cloud-native deployments.</li>
+<li><strong>No dependency injection or DI container</strong>: All dependencies are instantiated directly as static methods. While appropriate for the current small scope, this makes unit testing and future extension harder without refactoring.</li>
+</ul>
+<h2 id="test-dependencies">Test Dependencies</h2>
+<p>No test projects or test-scoped dependencies were detected in the repository.</p>
+<p>Total test-scope dependencies: 0</p>
+<p>No test infrastructure is present. There are no unit test projects, no testing frameworks (xUnit, NUnit, MSTest), and no mocking libraries. Adding a test project targeting the parsing and persistence logic would be beneficial before any migration effort.</p>
+</div>
+</div>
+<div id="tab-data" class="tab-panel">
+  <div class="fact-content"><h1 id="data-architecture-persistence-layer">Data Architecture &amp; Persistence Layer</h1>
+<p>ZavaAuditWorker uses raw ADO.NET (no ORM) against a SQL Server database, persisting audit events into a single <code>AuditLog</code> table that supports two schema variants detected at runtime.</p>
+<h2 id="database-configuration">Database Configuration</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service/Module</th><th>DB Type</th><th>Profile</th><th>Driver</th><th>Connection</th><th>Migration Tool</th></tr></thead><tbody>
+<tr><td>ZavaAuditWorker</td><td>SQL Server</td><td>All (single profile)</td><td>System.Data.SqlClient (.NET Framework 4.8 built-in)</td><td>Configurable via <code>DB_CONNECTION_STRING</code> env var or individual <code>DB_HOST</code>/<code>DB_PORT</code>/<code>DB_NAME</code>/<code>DB_USER</code>/<code>DB_PASSWORD</code> vars; default <code>Server=sqlserver,1433;Database=ZavaBankDB;User ID=sa;<strong><em></strong></em>;Encrypt=False;TrustServerCertificate=True</code></td><td>None — no migration tool present; schema is managed externally</td></tr>
+</tbody></table></div>
+<p>Schema version is detected at runtime by querying <code>INFORMATION_SCHEMA.COLUMNS</code> — no DDL auto-generation, no Flyway/Liquibase/EF Migrations. The application is schema-passive: it adapts its INSERT statements to whichever schema it finds. There is no seed data mechanism in this codebase.</p>
+<h2 id="data-ownership-per-service">Data Ownership per Service</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Tables Owned</th><th>ORM Framework</th><th>Caching</th><th>Notes</th></tr></thead><tbody>
+<tr><td>ZavaAuditWorker</td><td><code>AuditLog</code>, <code>AuditActions</code></td><td>None (raw ADO.NET)</td><td>None</td><td>Supports two <code>AuditLog</code> schema variants (legacy with <code>ActionID</code> FK and modern with direct columns). <code>AuditActions</code> is only used in the legacy schema path.</td></tr>
+</tbody></table></div>
+<h2 id="entity-model">Entity Model</h2>
+<div class="mermaid">
+erDiagram
+    AuditActions ||--o{ AuditLog : "categorizes"
+
+    AuditActions {
+        int ActionID PK
+        string ActionName
+        string Description
+        string Severity
+    }
+
+    AuditLog_Modern {
+        int Id PK
+        string EventType
+        string ServiceName
+        string UserId
+        datetime Timestamp
+        string Details
+        string CorrelationId
+    }
+
+    AuditLog_Legacy {
+        int Id PK
+        int ActionID FK
+        string UserName
+        string IPAddress
+        string TableName
+        string RecordID
+        string OldValues
+        string NewValues
+        string Description
+        datetime Timestamp
+        string SessionID
+        string MachineName
+    }
+</div>
+<p>&gt; Note: <code>AuditLog_Modern</code> and <code>AuditLog_Legacy</code> represent the same physical <code>AuditLog</code> table under two schema variants detected at runtime. They are shown as separate entities here to illustrate both column sets. The schema in use is determined by checking whether an <code>ActionID</code> column exists in <code>INFORMATION_SCHEMA.COLUMNS</code>.</p>
+<h2 id="key-repository-methods">Key Repository Methods</h2>
+<p>There is no repository interface layer. All data access is implemented via inline ADO.NET <code>SqlCommand</code> calls in the <code>Program</code> class. The following table documents those queries by purpose:</p>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Method</th><th>SQL Operation</th><th>Purpose</th></tr></thead><tbody>
+<tr><td>ZavaAuditWorker</td><td><code>HasLegacyAuditColumns(SqlConnection)</code></td><td><code>SELECT COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME=&#39;AuditLog&#39; AND COLUMN_NAME=&#39;ActionID&#39;</code></td><td>Runtime schema detection; determines which insert path to use</td></tr>
+<tr><td>ZavaAuditWorker</td><td><code>EnsureAction(SqlConnection, string)</code></td><td><code>SELECT ActionID FROM AuditActions WHERE ActionName=@ActionName</code> then <code>INSERT INTO AuditActions ...</code></td><td>Lookup-or-insert into the <code>AuditActions</code> lookup table (legacy path only)</td></tr>
+<tr><td>ZavaAuditWorker</td><td><code>InsertLegacyAuditRow(SqlConnection, AuditEvent)</code></td><td><code>INSERT INTO AuditLog (ActionID, UserName, IPAddress, ...)</code></td><td>Persists audit event using legacy schema with <code>ActionID</code> foreign key</td></tr>
+<tr><td>ZavaAuditWorker</td><td><code>InsertModernAuditRow(SqlConnection, AuditEvent)</code></td><td><code>INSERT INTO AuditLog (EventType, ServiceName, UserId, ...)</code></td><td>Persists audit event using modern schema with direct columns</td></tr>
+</tbody></table></div>
+<p>No transactions are used explicitly. Each insert is a single statement with no <code>TransactionScope</code> or <code>BEGIN TRANSACTION</code>. There is also no connection pooling configuration beyond ADO.NET&#39;s built-in default pool.</p>
+<h2 id="caching-strategy">Caching Strategy</h2>
+<p>No caching layer is present. All reads (the <code>HasLegacyAuditColumns</code> schema detection query and the <code>EnsureAction</code> lookup) execute a live database query on every single poll cycle. There are no <code>@Cacheable</code>, <code>IMemoryCache</code>, <code>IDistributedCache</code>, Redis, or any other cache abstractions in use.</p>
+<p>This is a notable performance concern: the schema detection query (<code>INFORMATION_SCHEMA.COLUMNS</code>) and the <code>AuditActions</code> lookup run once per message, not once per application lifetime. For high-throughput scenarios, caching the schema detection result and the <code>ActionID</code> lookup in memory would significantly reduce database round-trips.</p>
+<h2 id="data-ownership-boundaries">Data Ownership Boundaries</h2>
+<p>ZavaAuditWorker is the sole service in this repository and operates as the exclusive writer to the <code>ZavaBankDB</code> database. It does not share a database with other observable services in this codebase.</p>
+<p>The schema detection pattern (querying <code>INFORMATION_SCHEMA</code>) implies the database schema is managed externally (by another migration process, DBA scripts, or another application), and this service adapts passively. There is no CQRS split — the same service reads (schema detection, action lookup) and writes (audit inserts) against the same database with the same connection.</p>
+<p>Cross-service data access is not applicable: no other service in this codebase reads from <code>ZavaBankDB</code>, and this service does not call external service APIs to fetch data.</p>
+<h3 id="data-classification-sensitivity">Data Classification &amp; Sensitivity</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Entity</th><th>Sensitive Fields</th><th>Classification</th><th>Controls in Place</th></tr></thead><tbody>
+<tr><td><code>AuditLog</code> (modern)</td><td><code>UserId</code> (user identifier), <code>Details</code> (raw message body — may contain PII depending on producers)</td><td>PII (potential)</td><td>None — no encryption-at-rest, no field masking, no access controls configured in this application</td></tr>
+<tr><td><code>AuditLog</code> (legacy)</td><td><code>UserName</code> (user identifier), <code>NewValues</code> / <code>OldValues</code> (may contain PII depending on what systems produce audit events), <code>SessionID</code></td><td>PII (potential)</td><td>None — no encryption-at-rest, no field masking, no access controls configured in this application</td></tr>
+<tr><td><code>AuditActions</code></td><td>None</td><td>None</td><td>N/A</td></tr>
+</tbody></table></div>
+<p>The full content of each consumed message body is stored verbatim in the <code>Details</code> / <code>NewValues</code> column. The actual sensitivity depends on the upstream audit event producers; no sanitization, redaction, or selective field capture is performed before storage. If upstream producers include sensitive fields (e.g., partial card numbers, health data, personal addresses) in their event payloads, this data would be stored in plaintext without any protection controls.</p>
+</div>
+</div>
+<p class="footer">Your feedback is invaluable &mdash; <a href="https://aka.ms/ghcp-appmod/feedback">Share feedback</a></p>
+<script>
+function toggleRow(rowId, triggerRow) {
+  var detail = document.getElementById(rowId);
+  var btn = document.getElementById('btn-' + rowId);
+  if (!detail) return;
+  var visible = detail.style.display !== 'none';
+  detail.style.display = visible ? 'none' : 'table-row';
+  if (btn) btn.classList.toggle('open', !visible);
+}
+(function() {
+  var nav = document.querySelector('.tab-nav');
+  if (!nav) return;
+  nav.addEventListener('click', function(e) {
+    var btn = e.target.closest('.tab-btn');
+    if (!btn) return;
+    var targetId = btn.getAttribute('data-tab');
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+    btn.classList.add('active');
+    var panel = document.getElementById(targetId);
+    if (panel) {
+      panel.classList.add('active');
+      // Render any mermaid diagrams in this panel that haven't been processed yet
+      if (window.__mermaidReady) { window.__renderMermaidIn(panel); }
+    }
+  });
+})();
+
+// ── Diagram lightbox ────────────────────────────────────────
+(function() {
+  var lightbox = document.getElementById('diagram-lightbox');
+  var inner = document.getElementById('diagram-lightbox-inner');
+  var closeBtn = document.getElementById('diagram-lightbox-close');
+  if (!lightbox || !inner || !closeBtn) return;
+
+  var scale = 1;
+  var translateX = 0;
+  var translateY = 0;
+  var isDragging = false;
+  var dragStartX = 0;
+  var dragStartY = 0;
+
+  function applyTransform() {
+    var svg = inner.querySelector('svg');
+    if (svg) {
+      svg.style.transform = 'translate(' + translateX + 'px, ' + translateY + 'px) scale(' + scale + ')';
+      svg.style.transformOrigin = 'center center';
+      svg.style.transition = 'none';
+    }
+  }
+
+  function resetTransform() {
+    scale = 1; translateX = 0; translateY = 0;
+    applyTransform();
+  }
+
+  function openLightbox(svgEl) {
+    inner.innerHTML = svgEl.outerHTML;
+    var injected = inner.querySelector('svg');
+    if (injected) {
+      injected.removeAttribute('width');
+      injected.removeAttribute('height');
+      injected.style.cursor = 'grab';
+    }
+    resetTransform();
+    lightbox.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLightbox() {
+    lightbox.classList.remove('open');
+    inner.innerHTML = '';
+    document.body.style.overflow = '';
+    resetTransform();
+  }
+
+  inner.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    var delta = e.deltaY > 0 ? 0.9 : 1.1;
+    scale = Math.min(Math.max(scale * delta, 0.3), 8);
+    applyTransform();
+  }, { passive: false });
+
+  inner.addEventListener('mousedown', function(e) {
+    if (e.button !== 0) return;
+    isDragging = true;
+    dragStartX = e.clientX - translateX;
+    dragStartY = e.clientY - translateY;
+    var svg = inner.querySelector('svg');
+    if (svg) { svg.style.cursor = 'grabbing'; }
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (!isDragging) return;
+    translateX = e.clientX - dragStartX;
+    translateY = e.clientY - dragStartY;
+    applyTransform();
+  });
+
+  document.addEventListener('mouseup', function() {
+    if (!isDragging) return;
+    isDragging = false;
+    var svg = inner.querySelector('svg');
+    if (svg) { svg.style.cursor = 'grab'; }
+  });
+
+  inner.addEventListener('dblclick', function() { resetTransform(); });
+
+  document.addEventListener('click', function(e) {
+    var card = e.target.closest('.mermaid');
+    if (!card) return;
+    if (e.target.closest('.diagram-lightbox-close')) return;
+    var svg = card.querySelector('svg');
+    if (svg) { openLightbox(svg); }
+  });
+
+  closeBtn.addEventListener('click', closeLightbox);
+
+  lightbox.addEventListener('click', function(e) {
+    if (e.target === lightbox) { closeLightbox(); }
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') { closeLightbox(); }
+  });
+})();
+
+var _currentTarget = '';
+
+function toggleMultiSelect(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  // Close others
+  document.querySelectorAll('.multi-select.open').forEach(function(ms) { if (ms.id !== id) ms.classList.remove('open'); });
+  el.classList.toggle('open');
+}
+
+// Close dropdowns on outside click
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.multi-select')) {
+    document.querySelectorAll('.multi-select.open').forEach(function(ms) { ms.classList.remove('open'); });
+  }
+});
+
+function getMultiSelectValues(msId) {
+  var el = document.getElementById(msId);
+  if (!el) return [];
+  var checked = el.querySelectorAll('input[type=checkbox]:checked');
+  var vals = [];
+  for (var i = 0; i < checked.length; i++) vals.push(checked[i].value);
+  return vals;
+}
+
+function onMultiSelectChange(msId, label) {
+  var el = document.getElementById(msId);
+  if (!el) return;
+  var vals = getMultiSelectValues(msId);
+  var total = el.querySelectorAll('input[type=checkbox]').length;
+  var btn = el.querySelector('.multi-select-btn');
+  if (btn) {
+    btn.textContent = vals.length > 0 && vals.length < total ? label + ' (' + vals.length + ')' : label;
+  }
+  applyFilters();
+}
+
+function applyFilters() {
+  var selectedDomains = getMultiSelectValues('domain-ms');
+  var selectedCrits = getMultiSelectValues('criticality-ms');
+
+  // Domain filter: show/hide entire sections (empty = show all)
+  var sections = document.querySelectorAll('.issue-section');
+  for (var i = 0; i < sections.length; i++) {
+    var domain = sections[i].getAttribute('data-domain');
+    sections[i].style.display = (selectedDomains.length === 0 || selectedDomains.indexOf(domain) >= 0) ? '' : 'none';
+  }
+
+  // Row-level filtering: respect target + criticality
+  var rows = document.querySelectorAll('.issue-row');
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    var section = row.closest('.issue-section');
+    if (section && section.style.display === 'none') {
+      row.style.display = 'none';
+      var next = row.nextElementSibling;
+      if (next && next.classList.contains('detail-row')) next.style.display = 'none';
+      continue;
+    }
+
+    // Check target filter
+    var show = true;
+    if (_currentTarget && row.hasAttribute('data-targets')) {
+      var targetsStr = row.getAttribute('data-targets');
+      if (targetsStr && targetsStr !== '{}') {
+        try {
+          var targets = JSON.parse(targetsStr);
+          if (Object.keys(targets).length > 0 && !targets[_currentTarget]) {
+            show = false;
+          }
+        } catch(e) {}
+      }
+    }
+
+    // Check criticality filter
+    if (show && selectedCrits.length > 0) {
+      var crit = row.getAttribute('data-criticality');
+      if (selectedCrits.indexOf(crit) < 0) show = false;
+    }
+
+    row.style.display = show ? '' : 'none';
+    var nextRow = row.nextElementSibling;
+    if (nextRow && nextRow.classList.contains('detail-row')) {
+      if (!show) nextRow.style.display = 'none';
+    }
+  }
+}
+
+function clearAllFilters() {
+  document.querySelectorAll('.multi-select input[type=checkbox]').forEach(function(cb) { cb.checked = false; });
+  var domainBtn = document.querySelector('#domain-ms .multi-select-btn');
+  if (domainBtn) domainBtn.textContent = 'Domain';
+  var critBtn = document.querySelector('#criticality-ms .multi-select-btn');
+  if (critBtn) critBtn.textContent = 'Criticality';
+  applyFilters();
+}
+
+function onTargetChange(targetId) {
+  _currentTarget = targetId;
+  var rows = document.querySelectorAll('.issue-row[data-targets]');
+  var totalEffort = 0;
+  var domainCrits = {}; // domain -> {mandatory:0, potential:0, optional:0}
+
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    var targets = JSON.parse(row.getAttribute('data-targets'));
+    var section = row.closest('.issue-section');
+    var domain = section ? section.getAttribute('data-domain') : '';
+
+    if (!targets || Object.keys(targets).length === 0) {
+      // No target data (e.g. security) — always show
+      var sp = parseFloat(row.querySelector('.sp-cell').textContent) || 0;
+      totalEffort += sp;
+      if (!domainCrits[domain]) domainCrits[domain] = {mandatory:0,potential:0,optional:0};
+      var crit = row.getAttribute('data-criticality') || 'optional';
+      domainCrits[domain][crit] = (domainCrits[domain][crit] || 0) + 1;
+      continue;
+    }
+
+    var override = targets[targetId];
+    if (!override) {
+      // Issue doesn't apply to this target
+      continue;
+    }
+
+    // Apply severity override
+    var newSeverity = (override.severity || row.getAttribute('data-default-severity') || '').toLowerCase();
+    row.setAttribute('data-criticality', newSeverity);
+    var critCell = row.querySelector('.crit-cell');
+    if (critCell) {
+      var critText = newSeverity === 'mandatory' ? 'Mandatory' : newSeverity === 'potential' ? 'Potential' : 'Optional';
+      var cssClass = newSeverity === 'mandatory' ? 'crit-square-mandatory' : newSeverity === 'potential' ? 'crit-square-potential' : 'crit-square-optional';
+      critCell.innerHTML = '<span class="crit-label"><span class="crit-square ' + cssClass + '"></span>' + critText + '</span>';
+    }
+
+    // Apply effort override
+    var newEffort = override.effort !== undefined ? override.effort : parseFloat(row.getAttribute('data-default-effort')) || 0;
+    var spCell = row.querySelector('.sp-cell');
+    if (spCell) spCell.textContent = newEffort;
+    totalEffort += newEffort;
+
+    if (!domainCrits[domain]) domainCrits[domain] = {mandatory:0,potential:0,optional:0};
+    domainCrits[domain][newSeverity] = (domainCrits[domain][newSeverity] || 0) + 1;
+  }
+
+  // Also add security findings effort (they don't have per-target data)
+  var secSection = document.querySelector('.issue-section[data-domain="security"]');
+  if (secSection) {
+    var secRows = secSection.querySelectorAll('.issue-row');
+    for (var j = 0; j < secRows.length; j++) {
+      if (!secRows[j].hasAttribute('data-targets') || secRows[j].getAttribute('data-targets') === '') {
+        var sp = parseFloat(secRows[j].querySelector('.sp-cell').textContent) || 0;
+        totalEffort += sp;
+        if (!domainCrits['security']) domainCrits['security'] = {mandatory:0,potential:0,optional:0};
+        var sc = secRows[j].getAttribute('data-criticality') || 'optional';
+        domainCrits['security'][sc] = (domainCrits['security'][sc] || 0) + 1;
+      }
+    }
+  }
+
+  // Update effort display
+  var label = totalEffort < 20 ? 'S' : totalEffort < 50 ? 'M' : totalEffort < 100 ? 'L' : 'XL';
+  var effortEl = document.getElementById('effort-display');
+  if (effortEl) effortEl.textContent = label + ' (total story points: ' + totalEffort + ')';
+
+  // Update donut charts
+  updateDonuts(domainCrits);
+
+  // Re-apply domain/criticality filters
+  applyFilters();
+}
+
+function updateDonuts(domainCrits) {
+  var container = document.getElementById('donut-container');
+  if (!container) return;
+  container.innerHTML = '';
+  var domainNames = {'cloud-readiness':'Cloud Readiness','java-upgrade':'Java Upgrade','dotnet-upgrade':'DotNET Upgrade','security':'Security'};
+  var domainOrder = ['cloud-readiness','java-upgrade','dotnet-upgrade','security'];
+  for (var d = 0; d < domainOrder.length; d++) {
+    var key = domainOrder[d];
+    var c = domainCrits[key];
+    if (!c || (c.mandatory + c.potential + c.optional) === 0) continue;
+    var total = c.mandatory + c.potential + c.optional;
+    var div = document.createElement('div');
+    div.className = 'domain-summary-item';
+    div.innerHTML = buildDonutSvg(c.mandatory, c.potential, c.optional) +
+      '<h3>' + domainNames[key] + '</h3>' +
+      '<div class="count">' + total + ' issue' + (total !== 1 ? 's' : '') + '</div>';
+    container.appendChild(div);
+  }
+}
+
+function buildDonutSvg(m, p, o) {
+  var total = m + p + o;
+  if (total === 0) return '<svg viewBox="0 0 100 100" width="100" height="100" style="display:block;margin:0 auto;"><circle cx="50" cy="50" r="35" fill="none" stroke="#d0d7de" stroke-width="15" opacity="0.5"/></svg>';
+  var r = 35, circ = 2 * Math.PI * r, offset = 0;
+  var svg = '<svg viewBox="0 0 100 100" width="100" height="100" style="display:block;margin:0 auto;transform:rotate(-90deg);">';
+  var segs = [{c:m,color:'var(--color-mandatory)'},{c:p,color:'var(--color-potential)'},{c:o,color:'var(--color-optional)'}];
+  for (var i = 0; i < segs.length; i++) {
+    if (segs[i].c === 0) continue;
+    var segLen = (segs[i].c / total) * circ;
+    var gap = total > segs[i].c ? 1.5 : 0;
+    var drawLen = Math.max(segLen - gap, 0.5);
+    svg += '<circle cx="50" cy="50" r="' + r + '" fill="none" stroke="' + segs[i].color + '" stroke-width="15" stroke-dasharray="' + drawLen.toFixed(2) + ' ' + circ.toFixed(2) + '" stroke-dashoffset="' + (-offset).toFixed(2) + '"/>';
+    offset += segLen;
+  }
+  svg += '</svg>';
+  return svg;
+}
+</script>
+<script>document.addEventListener('DOMContentLoaded', function() { onTargetChange('AppService.Windows'); });</script>
+</div></body></html>
