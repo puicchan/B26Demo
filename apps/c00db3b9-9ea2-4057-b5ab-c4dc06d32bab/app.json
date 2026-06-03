@@ -1,0 +1,9 @@
+{
+  "name": "ZavaAuthGateway",
+  "created_at": "2026-06-03T21:33:47.0478021\u002B00:00",
+  "source": {
+    "provider": "github",
+    "host": "github.com",
+    "repo": "puicchan/ZavaAuthGateway"
+  }
+}
