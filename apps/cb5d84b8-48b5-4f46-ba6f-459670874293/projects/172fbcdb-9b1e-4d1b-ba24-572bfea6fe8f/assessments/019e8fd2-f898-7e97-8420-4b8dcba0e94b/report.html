@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Assessment - ZavaInterestCalculator</title>
+<style>
+:root {
+  --bg-primary: #ffffff;
+  --bg-card: #f8f9fa;
+  --bg-page: #f0f1f3;
+  --text-primary: #24292f;
+  --text-secondary: #57606a;
+  --text-muted: #6b7280;
+  --border-color: #d0d7de;
+  --border-light: #e1e4e8;
+  --link-color: #2563eb;
+  --color-mandatory: #E3008C;
+  --color-potential: #637CEF;
+  --color-optional: #A19F9D;
+  --font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+  --font-mono: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-family); font-size: 13px; color: var(--text-primary); background: var(--bg-primary); line-height: 1.5; margin: 0; padding: 0; }
+a { color: var(--link-color); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Page layout ───────────────────────────────────────────── */
+.main { margin: 0; padding: 24px 32px; background: var(--bg-primary); }
+.back-link { color: var(--text-muted); font-size: 13px; margin-bottom: 16px; display: block; }
+h1 { font-weight: 600; font-size: 20px; color: var(--text-primary); margin-bottom: 20px; }
+
+/* ── Report cards (matches VS Code .vscode-report-card) ──── */
+.report-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 4px; padding: 12px; margin-bottom: 20px; }
+.report-card h2 { font-size: 14px; font-weight: 600; margin: 0; color: var(--text-primary); }
+.report-card-body { margin-top: 16px; }
+
+/* ── Component Information (two-column) ────────────────── */
+.app-info-container { display: flex; gap: 8px; flex-wrap: wrap; }
+.app-info-column { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 8px; }
+.app-info-row { display: flex; align-items: baseline; }
+.app-info-label { width: 136px; flex-shrink: 0; font-weight: 600; color: var(--text-primary); }
+.app-info-value { flex: 1; color: var(--text-primary); }
+
+/* ── Issue Summary (pie charts + legend) ─────────────────── */
+.cards-container { display: flex; align-items: stretch; gap: 20px; flex-wrap: wrap; }
+.issue-summary-card { flex: 2; }
+.domain-summary-container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-around; }
+.domain-summary-item { flex: 1; min-width: 120px; text-align: center; padding: 0 16px; border-right: 1px solid var(--border-light); }
+.domain-summary-item:last-child { border-right: none; }
+.domain-summary-item h3 { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-top: 8px; }
+.domain-summary-item .count { font-size: 12px; color: var(--text-secondary); }
+.criticality-legend { display: flex; flex-wrap: wrap; gap: 15px; padding-top: 12px; justify-content: center; }
+.criticality-legend .legend-item { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-secondary); }
+.legend-swatch { display: inline-block; width: 1em; height: 1em; border-radius: 2px; }
+
+/* ── Issue list tables ───────────────────────────────────── */
+.issue-section { margin-top: 20px; }
+.issue-section h2 { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+.issue-table { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 600px; }
+.issue-table th { text-align: left; text-transform: uppercase; font-weight: 600; font-size: calc(13px * 0.875); padding: 6px 8px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); color: var(--text-secondary); position: sticky; top: 0; z-index: 1; }
+.issue-table td { padding: 12px 8px; border-bottom: 1px solid var(--border-light); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+.col-issue { width: 55%; }
+.col-criticality { width: 25%; }
+.col-storypoint { width: 20%; }
+
+/* ── Target dropdown ─────────────────────────────────────── */
+.target-select-container { margin: 4px 0 16px 0; display: flex; align-items: center; gap: 8px; }
+.target-select-container label { font-weight: 600; color: var(--text-primary); font-size: 14px; }
+.target-select-container select { font-family: var(--font-family); font-size: 13px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-primary); color: var(--text-primary); cursor: pointer; }
+
+/* ── Filter bar ──────────────────────────────────────────── */
+.filter-bar { display: flex; flex-wrap: wrap; gap: 16px; margin: 16px 0 8px 0; align-items: center; }
+.multi-select { position: relative; display: inline-block; min-width: 140px; }
+.multi-select-btn { font-family: var(--font-family); font-size: 13px; padding: 4px 24px 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-primary); color: var(--text-primary); cursor: pointer; width: 100%; text-align: left; position: relative; white-space: nowrap; }
+.multi-select-btn::after { content: '\25BE'; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 11px; color: var(--text-secondary); }
+.multi-select-dropdown { display: none; position: absolute; top: 100%; left: 0; min-width: 100%; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 100; margin-top: 2px; }
+.multi-select.open .multi-select-dropdown { display: block; }
+.multi-select-option { display: flex; align-items: center; gap: 6px; padding: 5px 10px; cursor: pointer; font-size: 13px; white-space: nowrap; }
+.multi-select-option:hover { background: var(--bg-secondary); }
+.multi-select-option input[type=checkbox] { margin: 0; cursor: pointer; }
+.clear-filters { font-size: 12px; color: var(--link-color); cursor: pointer; margin-left: 4px; }
+
+/* ── Criticality labels (colored square + text) ──────────── */
+.crit-label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; }
+.crit-square { display: inline-block; width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.crit-square-mandatory { background: var(--color-mandatory); }
+.crit-square-potential { background: var(--color-potential); }
+.crit-square-optional { background: var(--color-optional); }
+
+/* ── Expandable rows ─────────────────────────────────────── */
+.expand-btn { background: none; border: none; cursor: pointer; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 11px; transition: transform 0.15s; padding: 0; vertical-align: middle; flex-shrink: 0; }
+.expand-btn.open { transform: rotate(90deg); }
+.issue-title-cell { display: flex; align-items: center; gap: 4px; }
+.detail-row td { padding: 0; border-bottom: 1px solid var(--border-light); white-space: normal; overflow: visible; text-overflow: clip; }
+.detail-content { display: flex; gap: 0; padding: 8px 8px 8px 32px; min-width: 0; }
+.file-list { flex: 0 0 50%; min-width: 0; overflow: hidden; }
+.file-list table { width: 100%; border-collapse: collapse; }
+.file-list th { font-size: calc(13px * 0.875); text-transform: uppercase; font-weight: 600; color: var(--text-secondary); padding: 6px 8px; border-bottom: 1px solid var(--border-color); text-align: left; height: 32px; }
+.file-list td { font-size: 13px; padding: 6px 8px; border-bottom: 1px solid var(--border-light); color: var(--text-primary); }
+.file-list .file-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px; display: block; }
+.file-list .position { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); }
+.explanation-panel { flex: 1; padding-left: 16px; min-width: 0; overflow-wrap: break-word; word-wrap: break-word; }
+.explanation-panel h4 { font-size: calc(13px * 0.875); text-transform: uppercase; font-weight: 600; color: var(--text-secondary); padding: 6px 0; border-bottom: 1px solid var(--border-color); height: 32px; margin: 0; }
+.explanation-panel p { font-size: 13px; padding: 8px 0; color: var(--text-primary); line-height: 1.6; white-space: normal; word-break: break-word; }
+
+/* ── Experimental badge ──────────────────────────────────── */
+.badge-experimental { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: #fef9c3; color: #854d0e; vertical-align: middle; margin-left: 8px; cursor: default; }
+
+/* ── Footer ──────────────────────────────────────────────── */
+.footer { text-align: center; margin-top: 24px; color: var(--text-muted); font-size: 13px; }
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 800px) {
+  .main { padding: 16px; }
+  .app-info-container { flex-direction: column; }
+  .domain-summary-container { flex-direction: column; }
+  .domain-summary-item { border-right: none; border-bottom: 1px solid var(--border-light); padding-bottom: 12px; }
+  .detail-content { flex-direction: column; }
+  .file-list { flex: none; width: 100%; }
+  .explanation-panel { padding-left: 0; padding-top: 8px; }
+}
+/* ── Tab navigation ──────────────────────────────────────── */
+.tab-nav { display: flex; gap: 0; border-bottom: 1px solid var(--border-color); margin-bottom: 28px; flex-wrap: wrap; }
+.tab-btn { background: none; border: none; border-bottom: 2px solid transparent; padding: 10px 18px; font-size: 13px; font-family: var(--font-family); color: var(--text-secondary); cursor: pointer; margin-bottom: -1px; white-space: nowrap; position: relative; }
+.tab-btn:hover { color: var(--text-primary); }
+.tab-btn.active { color: var(--link-color); border-bottom-color: var(--link-color); font-weight: 600; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── Tooltip on tab ──────────────────────────────────────── */
+.tab-btn[data-tooltip]::after { content: attr(data-tooltip); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: #24292f; color: #ffffff; font-size: 12px; font-weight: 400; padding: 6px 10px; border-radius: 4px; white-space: normal; width: max-content; max-width: 260px; text-align: center; pointer-events: none; opacity: 0; transition: opacity 0.15s; z-index: 100; }
+.tab-btn[data-tooltip]:hover::after { opacity: 1; }
+
+/* ── Fact content — prose column ─────────────────────────── */
+.fact-content { max-width: 860px; margin: 0 auto; line-height: 1.75; color: var(--text-primary); font-size: 14px; }
+.fact-content h1 { font-size: 22px; font-weight: 700; margin: 0 0 6px 0; color: var(--text-primary); letter-spacing: -0.01em; }
+.fact-content h1 + p { margin-top: 6px; color: var(--text-secondary); font-size: 14px; margin-bottom: 24px; }
+.fact-content h2 { font-size: 17px; font-weight: 700; margin: 36px 0 12px 0; padding-bottom: 6px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); letter-spacing: -0.01em; }
+.fact-content h3 { font-size: 14px; font-weight: 700; margin: 24px 0 8px 0; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; color: var(--text-secondary); }
+.fact-content p { margin: 10px 0; color: var(--text-primary); }
+.fact-content ul, .fact-content ol { margin: 10px 0 10px 22px; }
+.fact-content li { margin: 5px 0; }
+.fact-content a { color: var(--link-color); }
+.fact-content a:hover { text-decoration: underline; }
+
+/* ── Fact tables ─────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; margin: 16px 0; }
+.fact-content table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 13px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color); }
+.fact-content thead { background: var(--bg-card); }
+.fact-content th { text-align: left; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; padding: 8px 14px; border-bottom: 1px solid var(--border-color); color: var(--text-secondary); }
+.fact-content td { padding: 9px 14px; border-bottom: 1px solid var(--border-light); vertical-align: top; color: var(--text-primary); }
+.fact-content tr:last-child td { border-bottom: none; }
+.fact-content tbody tr:hover { background: #f6f8fa; }
+
+/* ── Fact code ───────────────────────────────────────────── */
+.fact-content code { font-family: var(--font-mono); font-size: 12px; background: #f0f1f3; padding: 2px 6px; border-radius: 4px; color: #c7254e; }
+.fact-content pre { background: #f6f8fa; border: 1px solid var(--border-light); border-radius: 6px; padding: 14px 16px; overflow-x: auto; margin: 14px 0; }
+.fact-content pre code { background: none; color: var(--text-primary); padding: 0; border-radius: 0; }
+.fact-content hr { border: none; border-top: 1px solid var(--border-light); margin: 28px 0; }
+.fact-content strong { font-weight: 600; }
+.fact-content em { font-style: italic; }
+.fact-content blockquote { border-left: 3px solid var(--border-color); margin: 12px 0; padding: 4px 16px; color: var(--text-secondary); }
+.fact-unavailable { padding: 32px 0; }
+.fact-unavailable h3 { font-size: 16px; font-weight: 600; color: var(--text-primary); text-transform: none; letter-spacing: 0; margin: 0 0 12px 0; }
+.fact-unavailable p { margin: 0 0 8px 0; color: var(--text-secondary); }
+.fact-unavailable ol, .fact-unavailable ul { margin: 0 0 0 22px; color: var(--text-primary); }
+.fact-unavailable li { margin: 6px 0; }
+
+/* ── Mermaid diagram card ─────────────────────────────────── */
+.mermaid { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 8px; padding: 24px 16px; margin: 20px 0; overflow-x: auto; text-align: center; cursor: pointer; position: relative; }
+.mermaid:hover { border-color: var(--border-color); }
+.mermaid svg { max-width: 100%; height: auto !important; display: inline-block; }
+.mermaid-zoom-hint { position: absolute; top: 8px; right: 10px; font-size: 11px; color: var(--text-muted); opacity: 0; transition: opacity 0.15s; pointer-events: none; }
+.mermaid:hover .mermaid-zoom-hint { opacity: 1; }
+
+/* ── Diagram lightbox ────────────────────────────────────── */
+.diagram-lightbox { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.7); backdrop-filter: blur(2px); align-items: center; justify-content: center; cursor: zoom-out; padding: 48px 32px; }
+.diagram-lightbox.open { display: flex; }
+.diagram-lightbox-inner { background: #ffffff; border-radius: 10px; padding: 32px; width: 88vw; max-height: 88vh; overflow: hidden; cursor: default; box-shadow: 0 24px 64px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; }
+.diagram-lightbox-inner svg { width: 100% !important; height: auto !important; max-height: 76vh; display: block; }
+.diagram-lightbox-close { position: fixed; top: 20px; right: 24px; background: #ffffff; border: none; border-radius: 50%; width: 36px; height: 36px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-primary); box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 1001; }
+.diagram-lightbox-close:hover { background: var(--bg-card); }
+.diagram-lightbox-hint { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.55); color: #ffffff; font-size: 12px; padding: 6px 14px; border-radius: 20px; pointer-events: none; white-space: nowrap; z-index: 1001; }
+</style>
+<script>
+window.__mermaidPending = [];
+window.__mermaidReady = false;
+window.__renderMermaidIn = function(container) {
+  // Until the real implementation overrides this (after the ES module import
+  // resolves), just queue the container so we can render it later.
+  if (container) { window.__mermaidPending.push(container); }
+};
+</script>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+mermaid.initialize({ startOnLoad: false, theme: 'default', flowchart: { useMaxWidth: true }, sequence: { useMaxWidth: true } });
+
+// Real implementation: actually run mermaid on the unprocessed diagrams in the
+// given container (only ones not already rendered). Adds a "Click to expand"
+// hint span after each successful render so the lightbox affordance is
+// discoverable.
+window.__renderMermaidIn = function(container) {
+  var nodes = container ? container.querySelectorAll('.mermaid:not([data-processed])') : [];
+  if (nodes.length > 0) {
+    mermaid.run({ nodes: Array.from(nodes) }).then(function() {
+      nodes.forEach(function(node) {
+        if (!node.querySelector('.mermaid-zoom-hint')) {
+          var hint = document.createElement('span');
+          hint.className = 'mermaid-zoom-hint';
+          hint.textContent = 'Click to expand';
+          node.appendChild(hint);
+        }
+      });
+    });
+  }
+};
+
+// Drain any containers that were queued by the shim while mermaid was loading.
+// Use a Set to dedupe in case a container was both queued and is also the
+// initial-active panel below.
+var drained = new Set();
+(window.__mermaidPending || []).forEach(function(c) {
+  if (!drained.has(c)) { drained.add(c); window.__renderMermaidIn(c); }
+});
+window.__mermaidPending = [];
+window.__mermaidReady = true;
+
+// Render diagrams visible on initial load (the active tab panel(s) may not have
+// been queued by anyone — DOMContentLoaded handlers run before this if the
+// module is cached, after this if it's not, so handle both cases here).
+function renderActivePanels() {
+  document.querySelectorAll('.tab-panel.active').forEach(function(p) {
+    if (!drained.has(p)) { drained.add(p); window.__renderMermaidIn(p); }
+  });
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', renderActivePanels);
+} else {
+  renderActivePanels();
+}
+</script>
+</head><body>
+<div id="diagram-lightbox" class="diagram-lightbox" role="dialog" aria-modal="true">
+  <button class="diagram-lightbox-close" id="diagram-lightbox-close" aria-label="Close">&#x2715;</button>
+  <div class="diagram-lightbox-hint">Scroll to zoom &nbsp;·&nbsp; Drag to pan &nbsp;·&nbsp; Double-click to reset</div>
+  <div class="diagram-lightbox-inner" id="diagram-lightbox-inner"></div>
+</div>
+<div class="main">
+<a class="back-link" href="../../index.html">&#8592; Back to aggregate dashboard</a>
+<h1>ZavaInterestCalculator</h1>
+<div class="report-card">
+  <h2>Component Information</h2>
+  <div class="report-card-body">
+    <div class="app-info-container">
+      <div class="app-info-column">
+        <div class="app-info-row"><span class="app-info-label">Component Name</span><span class="app-info-value">ZavaInterestCalculator</span></div>
+        <div class="app-info-row"><span class="app-info-label">Repository</span><span class="app-info-value">ZavaInterestCalculator</span></div>
+        <div class="app-info-row"><span class="app-info-label">Application</span><span class="app-info-value">ZavaInterestCalculator</span></div>
+      </div>
+      <div class="app-info-column">
+        <div class="app-info-row"><span class="app-info-label">Java Version</span><span class="app-info-value">Unknown</span></div>
+        <div class="app-info-row"><span class="app-info-label">Effort</span><span class="app-info-value" id="effort-display">S (total story points: 8)</span></div>
+        <div class="app-info-row"><span class="app-info-label">Build Tools</span><span class="app-info-value">Gradle</span></div>
+        <div class="app-info-row"><span class="app-info-label">Frameworks</span><span class="app-info-value">N/A</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<nav class="tab-nav">
+  <button class="tab-btn active" data-tab="tab-issues" data-tooltip="Issues detected in the source code">Issues</button>
+  <button class="tab-btn" data-tab="tab-arch" data-tooltip="How the app&#39;s layers connect — from UI to data.">Architecture</button>
+  <button class="tab-btn" data-tab="tab-api" data-tooltip="Endpoints exposed by this app and how services communicate.">API Contracts</button>
+  <button class="tab-btn" data-tab="tab-config" data-tooltip="Environment settings, runtime profiles, and deployment manifests.">Configuration</button>
+  <button class="tab-btn" data-tab="tab-workflows" data-tooltip="Domain entities and the core flows users move through.">Business Workflows</button>
+  <button class="tab-btn" data-tab="tab-deps" data-tooltip="Libraries and frameworks this app depends on, grouped by category.">Dependencies</button>
+  <button class="tab-btn" data-tab="tab-data" data-tooltip="Database schema, entity relationships, and persistence behavior.">Data Model</button>
+</nav>
+<div id="tab-issues" class="tab-panel active">
+<div class="target-select-container">
+  <label for="target-select">Target Compute Service:</label>
+  <select id="target-select" onchange="onTargetChange(this.value)">
+    <option value="azure-aks">Azure Kubernetes Service</option>
+    <option value="azure-appservice">Azure App Service</option>
+    <option value="azure-container-apps">Azure Container Apps</option>
+  </select>
+</div>
+<div class="report-card">
+  <h2>Issue Summary</h2>
+  <div class="report-card-body">
+    <div class="domain-summary-container" id="donut-container">
+      <div class="domain-summary-item">
+<svg viewBox="0 0 100 100" width="100" height="100" style="display:block;margin:0 auto;transform:rotate(-90deg);">
+  <circle cx="50" cy="50" r="35" fill="none" stroke="var(--color-mandatory)" stroke-width="15" stroke-dasharray="219.91 219.91" stroke-dashoffset="-0.00"/>
+</svg>
+
+        <h3>Java Upgrade</h3>
+        <div class="count">1 issue</div>
+      </div>
+    </div>
+    <div class="criticality-legend">
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--color-mandatory)"></span>Mandatory</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--color-potential)"></span>Potential</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--color-optional)"></span>Optional</div>
+    </div>
+  </div>
+</div>
+<div class="filter-bar" id="filter-bar">
+  <a class="clear-filters" href="javascript:void(0)" onclick="clearAllFilters()">Clear all</a>
+</div>
+<div class="issue-section" data-domain="java-upgrade">
+  <h2>Java Upgrade</h2>
+  <table class="issue-table">
+    <colgroup><col class="col-issue"/><col class="col-criticality"/><col class="col-storypoint"/></colgroup>
+    <thead><tr><th>Issue Category</th><th>Criticality</th><th>Story Point</th></tr></thead>
+    <tbody>
+    <tr class="issue-row" data-criticality="mandatory" data-targets='{"azure-aks":{"effort":8,"severity":"mandatory"},"azure-appservice":{"effort":8,"severity":"mandatory"},"azure-container-apps":{"effort":8,"severity":"mandatory"}}' data-default-effort="8" data-default-severity="mandatory" data-rule="azure-java-version-01000" onclick="toggleRow('row-javaupgrade-0', this)" style="cursor:pointer;">
+      <td style="white-space:normal;"><div class="issue-title-cell"><button class="expand-btn" id="btn-row-javaupgrade-0">&#x276F;</button> Java Version Has Reached the End of Support</div></td>
+      <td class="crit-cell"><span class="crit-label"><span class="crit-square crit-square-mandatory"></span>Mandatory</span></td>
+      <td class="sp-cell">8</td>
+    </tr>
+    <tr class="detail-row" id="row-javaupgrade-0" style="display:none;">
+      <td colspan="3">
+        <div class="detail-content">
+          <div class="file-list">
+            <table><colgroup><col style="width:70%"/><col style="width:30%"/></colgroup>
+            <thead><tr><th>File</th><th>Position</th></tr></thead><tbody>
+            <tr><td><span class="file-path" title="build.gradle">build.gradle</span></td><td><span class="position">Line 7, Col 0</span></td></tr>
+            <tr><td><span class="file-path" title="build.gradle">build.gradle</span></td><td><span class="position">Line 8, Col 0</span></td></tr>
+            </tbody></table>
+          </div>
+          <div class="explanation-panel">
+            <h4>Explanation</h4>
+            <div><p>The application is using a Java version that has reached the end of support. It is strongly recommended to plan and execute a migration strategy to upgrade your application to a supported Java version.<br/>Supported Java versions receive long-term support (LTS) from the Java community, including bug fixes and updates. Migrating to a supported version provides you with a stable and well-maintained platform for your application.</p></div>
+          </div>
+        </div>
+      </td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+</div><!-- #tab-issues -->
+<div id="tab-arch" class="tab-panel">
+  <div class="fact-content"><h1 id="architecture-diagram">Architecture Diagram</h1>
+<p>ZavaInterestCalculator is a Java EE Servlet-based web application that provides interest calculation and accrual services for ZavaBank, backed by a Microsoft SQL Server database.</p>
+<h2 id="application-architecture">Application Architecture</h2>
+<div class="mermaid">
+flowchart TD
+    subgraph Client["Client Layer"]
+        Browser["Web Browser / API Client"]
+    end
+    subgraph App["Application Layer - Java EE Servlet 3.1 / Java 8"]
+        HealthSrv["HealthServlet (GET /health)"]
+        BootSrv["InterestBootstrapServlet (on startup)"]
+        CalcSrv["InterestCalculateServlet (POST /api/interest/calculate)"]
+        AccrueSrv["InterestAccrueAllServlet (POST /api/interest/accrue-all)"]
+        Config["InterestConfig (configuration)"]
+        ConnFactory["InterestConnectionFactory (JDBC)"]
+    end
+    subgraph Data["Data Layer"]
+        JDBC["JDBC - mssql-jdbc 12.6.3"]
+        DB[("Microsoft SQL Server - ZavaBankDB")]
+    end
+
+    Browser -->|"HTTP requests"| HealthSrv
+    Browser -->|"HTTP POST JSON"| CalcSrv
+    Browser -->|"HTTP POST JSON"| AccrueSrv
+    BootSrv -->|"DDL on startup"| ConnFactory
+    CalcSrv -->|"uses"| Config
+    CalcSrv -->|"opens connection"| ConnFactory
+    AccrueSrv -->|"uses"| Config
+    AccrueSrv -->|"opens connection"| ConnFactory
+    ConnFactory -->|"JDBC connection"| JDBC
+    JDBC -->|"SQL queries"| DB
+</div>
+<h3 id="technology-stack-summary">Technology Stack Summary</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Layer</th><th>Technology</th><th>Version</th><th>Purpose</th></tr></thead><tbody>
+<tr><td>Presentation</td><td>Java Servlet API (JSP + HttpServlet)</td><td>3.1</td><td>HTTP request handling and JSON responses</td></tr>
+<tr><td>Business Logic</td><td>Plain Java</td><td>8</td><td>Interest calculation (simple, compound, amortized)</td></tr>
+<tr><td>Data Access</td><td>JDBC (direct)</td><td>N/A</td><td>SQL queries and transactions against SQL Server</td></tr>
+<tr><td>Database Driver</td><td>Microsoft JDBC for SQL Server</td><td>12.6.3</td><td>JDBC connectivity to SQL Server</td></tr>
+<tr><td>JSON Processing</td><td>org.json</td><td>20140107</td><td>JSON request/response serialization</td></tr>
+<tr><td>Build Tool</td><td>Gradle</td><td>N/A</td><td>Build and WAR packaging</td></tr>
+<tr><td>Deployment</td><td>WAR / Servlet Container (e.g. Tomcat)</td><td>N/A</td><td>Runtime hosting</td></tr>
+</tbody></table></div>
+<h3 id="data-storage-external-services">Data Storage &amp; External Services</h3>
+<p>The application relies exclusively on a single Microsoft SQL Server database (<code>ZavaBankDB</code>) accessed via JDBC. It reads from and writes to two core tables: <code>Accounts</code> (joined with <code>AccountTypes</code> for interest rates) and <code>InterestAccruals</code> (created at startup if absent). No external APIs, message brokers, caches, or third-party services are used. Connection parameters (host, port, database name, credentials) are resolved from environment variables or the <code>interest.properties</code> configuration file.</p>
+<h3 id="key-architectural-decisions">Key Architectural Decisions</h3>
+<ul>
+<li><strong>No framework</strong>: The application uses raw Java EE Servlets without Spring, Jakarta EE CDI, or any DI container — all wiring is manual through static factory calls.</li>
+<li><strong>Direct JDBC</strong>: Data access is performed via <code>DriverManager.getConnection()</code> and hand-written SQL, with manual transaction management (commit/rollback) rather than a persistence framework like JPA or Hibernate.</li>
+<li><strong>Configuration via environment variables with property file fallback</strong>: <code>InterestConfig</code> reads environment variables first and falls back to <code>interest.properties</code>, enabling container-friendly deployment.</li>
+</ul>
+<h2 id="component-relationships">Component Relationships</h2>
+<div class="mermaid">
+flowchart LR
+    subgraph Presentation["Presentation (Servlets)"]
+        HealthSrv["HealthServlet"]
+        BootSrv["InterestBootstrapServlet"]
+        CalcSrv["InterestCalculateServlet"]
+        AccrueSrv["InterestAccrueAllServlet"]
+    end
+    subgraph Infrastructure["Infrastructure"]
+        Config["InterestConfig"]
+        ConnFactory["InterestConnectionFactory"]
+    end
+
+    CalcSrv -->|"reads config"| Config
+    AccrueSrv -->|"reads config"| Config
+    BootSrv -->|"opens connection"| ConnFactory
+    CalcSrv -->|"opens connection"| ConnFactory
+    AccrueSrv -->|"opens connection"| ConnFactory
+    ConnFactory -->|"uses URL/credentials"| Config
+</div>
+<h3 id="component-inventory">Component Inventory</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Component</th><th>Layer</th><th>Type</th><th>Responsibility</th></tr></thead><tbody>
+<tr><td>HealthServlet</td><td>Presentation</td><td>HttpServlet</td><td>Responds to GET /health with an HTML status page</td></tr>
+<tr><td>InterestBootstrapServlet</td><td>Presentation / Lifecycle</td><td>HttpServlet (load-on-startup)</td><td>Creates the InterestAccruals table on application startup if it does not exist</td></tr>
+<tr><td>InterestCalculateServlet</td><td>Presentation</td><td>HttpServlet</td><td>Handles POST /api/interest/calculate: calculates interest for a single account and optionally persists the accrual</td></tr>
+<tr><td>InterestAccrueAllServlet</td><td>Presentation</td><td>HttpServlet</td><td>Handles POST /api/interest/accrue-all: batch-accrues interest for all active accounts in a single transaction</td></tr>
+<tr><td>InterestConfig</td><td>Infrastructure</td><td>Utility / Config</td><td>Resolves configuration values (DB connection params, default rates) from environment variables or interest.properties</td></tr>
+<tr><td>InterestConnectionFactory</td><td>Infrastructure</td><td>Factory</td><td>Loads the SQL Server JDBC driver and opens JDBC connections using values from InterestConfig</td></tr>
+</tbody></table></div>
+</div>
+</div>
+<div id="tab-api" class="tab-panel">
+  <div class="fact-content"><h1 id="api-service-communication-contracts">API &amp; Service Communication Contracts</h1>
+<p>ZavaInterestCalculator exposes 4 HTTP endpoints via plain Java EE Servlets, all communicating synchronously with a single Microsoft SQL Server database and returning JSON responses.</p>
+<h2 id="service-catalog">Service Catalog</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Port</th><th>Category</th><th>Purpose</th></tr></thead><tbody>
+<tr><td>ZavaInterestCalculator</td><td>8080 (container default)</td><td>Business</td><td>Single WAR application providing interest calculation and batch accrual services for ZavaBank accounts</td></tr>
+</tbody></table></div>
+<h2 id="api-endpoints-inventory">API Endpoints Inventory</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Method</th><th>Path</th><th>Request Type</th><th>Response Type</th></tr></thead><tbody>
+<tr><td>ZavaInterestCalculator</td><td>GET</td><td>/health</td><td>None</td><td>HTML status page (200 OK)</td></tr>
+<tr><td>ZavaInterestCalculator</td><td>POST</td><td>/api/interest/calculate</td><td>JSON body (accountId, interestType, days, annualRate, compoundsPerYear, termMonths, applyToBalance)</td><td>JSON (status, accountId, interestType, annualRate, days, balanceBefore, interestAmount, balanceAfter, applied)</td></tr>
+<tr><td>ZavaInterestCalculator</td><td>POST</td><td>/api/interest/accrue-all</td><td>JSON body (optional: interestType, days, compoundsPerYear, termMonths)</td><td>JSON (status, interestType, days, accruedAccounts, totalInterest)</td></tr>
+<tr><td>ZavaInterestCalculator</td><td>GET+internal</td><td>/internal/bootstrap</td><td>None (fires on startup)</td><td>No HTTP response; runs DDL to create InterestAccruals table</td></tr>
+</tbody></table></div>
+<h2 id="management-observability-endpoints">Management &amp; Observability Endpoints</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Endpoint</th><th>Custom Metrics</th></tr></thead><tbody>
+<tr><td>ZavaInterestCalculator</td><td>GET /health</td><td>None — returns a static HTML string; no structured health payload, no uptime or dependency status</td></tr>
+</tbody></table></div>
+<p>No Spring Boot Actuator or equivalent framework-level observability endpoints are present. There are no Prometheus metrics, structured health check responses, or distributed tracing integrations.</p>
+<h2 id="dtos-contracts">DTOs &amp; Contracts</h2>
+<p>The application has no formal DTO or contract classes. All API contracts are expressed inline within each Servlet using <code>org.json.JSONObject</code> for both request parsing and response building:</p>
+<ul>
+<li><strong>Request deserialization</strong>: Each Servlet reads the raw HTTP body as a string, parses it with <code>new JSONObject(body)</code>, and extracts fields via <code>optInt</code>, <code>optString</code>, <code>optDouble</code>, and <code>optBoolean</code> accessors. No request model class exists.</li>
+<li><strong>Response serialization</strong>: Responses are constructed programmatically with <code>JSONObject.put(...)</code> and written directly to <code>response.getWriter()</code>. No response model class exists.</li>
+<li><strong>Internal snapshot</strong>: <code>InterestCalculateServlet</code> uses a private inner class <code>AccountSnapshot</code> (fields: <code>balance</code>, <code>accountTypeRate</code>) as a transient in-memory holder populated from the SQL <code>ResultSet</code>. It is not exposed over the wire.</li>
+<li><strong>No OpenAPI/Swagger specification</strong> exists.</li>
+<li><strong>No protobuf schemas or GraphQL schemas</strong> exist.</li>
+<li><strong>No serialization configuration</strong> (Jackson, custom serializers, content negotiation) — the application manually writes JSON strings.</li>
+</ul>
+<h2 id="communication-patterns">Communication Patterns</h2>
+<p><strong>Synchronous only.</strong> All interactions are synchronous HTTP request/response with no asynchronous or event-driven patterns:</p>
+<ul>
+<li><strong>Client → Application</strong>: Plain HTTP (no HTTPS/TLS configured at the application level). Clients POST JSON payloads directly to Servlet endpoints.</li>
+<li><strong>Application → Database</strong>: Synchronous JDBC via <code>DriverManager.getConnection()</code>. Each request opens a new connection, executes SQL, and closes the connection in a <code>finally</code> block. No connection pool (e.g., HikariCP, DBCP) is configured.</li>
+<li><strong>Transactions</strong>: <code>InterestCalculateServlet</code> and <code>InterestAccrueAllServlet</code> use manual JDBC transaction management (<code>setAutoCommit(false)</code> / <code>commit()</code> / <code>rollback()</code>).</li>
+<li><strong>No resilience patterns</strong>: No circuit breaker, retry logic, timeout configuration, or bulkhead patterns are implemented.</li>
+<li><strong>No service discovery</strong>: The application is a single-service WAR with no inter-service calls; database connection details are resolved from environment variables or <code>interest.properties</code>.</li>
+<li><strong>No API gateway</strong>: Requests reach the Servlet container directly.</li>
+<li><strong>No client-side load balancing</strong>.</li>
+<li><strong>Startup dependency chain</strong>: <code>InterestBootstrapServlet</code> is declared with <code>load-on-startup=1</code>, so it runs DDL (creates the <code>InterestAccruals</code> table if absent) before the other Servlets handle traffic. If the database is unavailable at startup the bootstrap will throw a <code>ServletException</code>, preventing application deployment.</li>
+<li><strong>Security posture</strong>: No authentication or TLS is configured at the application level. All endpoints — including <code>/api/interest/accrue-all</code> which modifies all active account balances — are publicly accessible with no authorization checks. There is no Spring Security, filter-based auth, or API key validation present.</li>
+</ul>
+<h2 id="service-technology-matrix">Service Technology Matrix</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Web Framework</th><th>Data Access</th><th>Discovery</th><th>Gateway</th><th>Health/Actuator</th><th>Cache</th><th>Metrics</th></tr></thead><tbody>
+<tr><td>ZavaInterestCalculator</td><td>Java EE Servlet 3.1</td><td>JDBC (direct, no ORM)</td><td>None</td><td>None</td><td>Custom /health (HTML only)</td><td>None</td><td>None</td></tr>
+</tbody></table></div>
+<h2 id="service-communication-sequence">Service Communication Sequence</h2>
+<div class="mermaid">
+sequenceDiagram
+    participant Client as "API Client"
+    participant Svc as "ZavaInterestCalculator"
+    participant DB as "SQL Server (ZavaBankDB)"
+
+    Client->>Svc: POST /api/interest/calculate {accountId, interestType, days, ...}
+    Svc->>DB: SELECT Balance, InterestRate FROM Accounts JOIN AccountTypes WHERE AccountID=?
+    DB-->>Svc: Account row (balance, accountTypeRate)
+    alt Account not found
+        Svc-->>Client: 404 {status: NOT_FOUND}
+    else Account found
+        Svc->>Svc: calculateInterest(principal, rate, days, type)
+        alt applyToBalance = true
+            Svc->>DB: BEGIN TRANSACTION
+            Svc->>DB: UPDATE Accounts SET Balance=?, InterestAccrued=?+? WHERE AccountID=?
+            Svc->>DB: INSERT INTO InterestAccruals (AccountID, InterestType, ...)
+            DB-->>Svc: COMMIT OK
+        end
+        Svc-->>Client: 200 {status: OK, interestAmount, balanceBefore, balanceAfter, applied}
+    end
+
+    Client->>Svc: POST /api/interest/accrue-all {interestType, days}
+    Svc->>DB: SELECT AccountID, Balance, InterestRate FROM Accounts WHERE Status=Active
+    DB-->>Svc: All active account rows
+    loop For each active account
+        Svc->>Svc: calculateInterest(principal, rate, days, type)
+        Svc->>DB: UPDATE Accounts SET Balance=? WHERE AccountID=?
+        Svc->>DB: INSERT INTO InterestAccruals (AccountID, InterestType, ...)
+    end
+    alt All updates succeed
+        Svc->>DB: COMMIT
+        DB-->>Svc: OK
+        Svc-->>Client: 200 {status: OK, accruedAccounts, totalInterest}
+    else SQL error
+        Svc->>DB: ROLLBACK
+        Svc-->>Client: 500 {status: ERROR}
+    end
+</div>
+</div>
+</div>
+<div id="tab-config" class="tab-panel">
+  <div class="fact-content"><h1 id="configuration-externalized-settings-inventory">Configuration &amp; Externalized Settings Inventory</h1>
+<p>ZavaInterestCalculator has a minimal configuration landscape consisting of a single <code>interest.properties</code> file and a set of environment variables defined in the <code>Dockerfile</code>; there are no Spring profiles, config servers, secret stores, or feature flags.</p>
+<h2 id="configuration-sources">Configuration Sources</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Source</th><th>Type</th><th>Path/Location</th><th>Notes</th></tr></thead><tbody>
+<tr><td>interest.properties</td><td>Properties file</td><td><code>src/main/resources/interest.properties</code></td><td>Bundled inside the WAR; provides defaults for DB connection and interest rate settings</td></tr>
+<tr><td>Environment variables</td><td>Runtime env</td><td>Set via Dockerfile ENV or container runtime</td><td>Takes precedence over interest.properties at runtime; defined for DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, DEFAULT_ANNUAL_RATE, DEFAULT_COMPOUNDS_PER_YEAR</td></tr>
+<tr><td>web.xml</td><td>Servlet descriptor</td><td><code>src/main/webapp/WEB-INF/web.xml</code></td><td>Configures Servlet mappings and startup order; not externalized</td></tr>
+<tr><td>Dockerfile</td><td>Container config</td><td><code>Dockerfile</code></td><td>Provides default ENV values baked into the image at build time</td></tr>
+</tbody></table></div>
+<p>No Spring Cloud Config server, Azure App Configuration, AWS AppConfig, Consul, HashiCorp Vault, or Azure KeyVault integration is present.</p>
+<h2 id="build-profiles">Build Profiles</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Profile</th><th>Activation</th><th>Purpose</th><th>Key Dependencies/Plugins</th></tr></thead><tbody>
+<tr><td>(default)</td><td>Always — single build configuration</td><td>Compiles Java 8 source, produces ROOT.war</td><td><code>java</code> plugin, <code>war</code> plugin; dependencies: <code>javax.servlet-api:3.1.0</code> (compileOnly), <code>mssql-jdbc:12.6.3.jre8</code>, <code>org.json:20140107</code></td></tr>
+</tbody></table></div>
+<p>Gradle has no build flavors, build types, or <code>-P</code> profile flags defined. There is one build configuration used in all environments.</p>
+<h2 id="runtime-profiles">Runtime Profiles</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Profile</th><th>Activation Method</th><th>Config Files</th><th>Key Overrides</th></tr></thead><tbody>
+<tr><td>(none)</td><td>N/A — no profile system</td><td>interest.properties (bundled)</td><td>Environment variables override any property at runtime</td></tr>
+</tbody></table></div>
+<p>The application has no Spring Profile (<code>@Profile</code>, <code>application-{profile}.properties</code>), no Maven/Gradle runtime profiles, and no <code>ASPNETCORE_ENVIRONMENT</code> or similar profile switch. Configuration is selected purely by the presence or absence of environment variables.</p>
+<h2 id="properties-inventory">Properties Inventory</h2>
+<h3 id="zavainterestcalculator">ZavaInterestCalculator</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Property Key</th><th>Default (interest.properties)</th><th>Runtime Override (env var)</th><th>Type</th><th>Notes</th></tr></thead><tbody>
+<tr><td><code>db.host</code></td><td><code>sqlserver</code></td><td><code>DB_HOST</code></td><td>String</td><td>Hostname of the SQL Server instance</td></tr>
+<tr><td><code>db.port</code></td><td><code>1433</code></td><td><code>DB_PORT</code></td><td>String</td><td>TCP port for SQL Server</td></tr>
+<tr><td><code>db.name</code></td><td><code>ZavaBankDB</code></td><td><code>DB_NAME</code></td><td>String</td><td>Database (catalog) name</td></tr>
+<tr><td><code>db.user</code></td><td><code>sa</code></td><td><code>DB_USER</code></td><td>String</td><td>SQL Server login username</td></tr>
+<tr><td><code>db.password</code></td><td><code>YourStrong!Passw0rd</code></td><td><code>DB_PASSWORD</code></td><td>String (sensitive)</td><td>SQL Server login password</td></tr>
+<tr><td><code>default.annual.rate</code></td><td><code>0.015</code></td><td><code>DEFAULT_ANNUAL_RATE</code></td><td>Double</td><td>Default annual interest rate (1.5%) used when account type has no rate</td></tr>
+<tr><td><code>default.compounds.per.year</code></td><td><code>12</code></td><td><code>DEFAULT_COMPOUNDS_PER_YEAR</code></td><td>Integer</td><td>Default compounding frequency for compound interest calculations</td></tr>
+</tbody></table></div>
+<p>The JDBC URL is assembled programmatically as <code>jdbc:sqlserver://{db.host}:{db.port};databaseName={db.name};encrypt=false;trustServerCertificate=true</code>. The <code>encrypt=false</code> flag disables TLS on the SQL Server connection.</p>
+<h2 id="startup-parameters-resource-requirements">Startup Parameters &amp; Resource Requirements</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>JVM/Runtime Options</th><th>Memory</th><th>Instance Count</th></tr></thead><tbody>
+<tr><td>ZavaInterestCalculator (Tomcat)</td><td>None explicitly configured; Tomcat 9 default JVM settings apply</td><td>Not configured — no <code>-Xms</code>/<code>-Xmx</code> or Docker <code>mem_limit</code> set</td><td>1 (no scaling config)</td></tr>
+</tbody></table></div>
+<p>The Dockerfile does not set any JVM heap, GC, or <code>-D</code> system property arguments. Tomcat&#39;s default <code>CATALINA_OPTS</code> and <code>JAVA_OPTS</code> are empty unless set by the container orchestration layer at runtime.</p>
+<h2 id="startup-dependency-chain">Startup Dependency Chain</h2>
+<ol>
+<li><strong>SQL Server</strong> must be available before the application starts — <code>InterestBootstrapServlet</code> (declared <code>load-on-startup=1</code>) attempts a JDBC connection immediately at Servlet context initialization. If the database is unreachable, the servlet throws a <code>ServletException</code> and Tomcat aborts deployment.</li>
+<li><strong>ZavaInterestCalculator (Tomcat)</strong> — starts next; <code>InterestBootstrapServlet</code> runs DDL (<code>CREATE TABLE IF NOT EXISTS InterestAccruals</code>) before any API traffic is accepted.</li>
+</ol>
+<p>No wait mechanisms (dockerize, <code>depends_on</code> with health checks, Kubernetes readiness probes, Spring Retry on config server) are configured. The application will fail hard at startup if SQL Server is not ready, with no retry or graceful degradation.</p>
+<h2 id="secrets-sensitive-configuration">Secrets &amp; Sensitive Configuration</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Secret Reference</th><th>Type</th><th>Storage</th></tr></thead><tbody>
+<tr><td><code>db.password</code> / <code>DB_PASSWORD</code></td><td>Database password</td><td>Hardcoded default <code>[MASKED]</code> in <code>interest.properties</code> and Dockerfile ENV; no secrets manager used</td></tr>
+<tr><td><code>db.user</code> / <code>DB_USER</code></td><td>Database username</td><td>Hardcoded default <code>sa</code> in <code>interest.properties</code> and Dockerfile ENV</td></tr>
+</tbody></table></div>
+<p><strong>Important findings:</strong></p>
+<ul>
+<li>The default database password is embedded in plain text in both <code>interest.properties</code> (bundled in the WAR) and as a <code>Dockerfile ENV</code> layer, meaning it is baked into the container image and visible to anyone with image access.</li>
+<li>The JDBC URL uses <code>encrypt=false;trustServerCertificate=true</code>, disabling TLS on the SQL Server connection — credentials and data are transmitted in cleartext over the network.</li>
+<li>The <code>sa</code> (system administrator) account is used as the application database user, violating the principle of least privilege.</li>
+</ul>
+<h3 id="secrets-provisioning-workflow">Secrets Provisioning Workflow</h3>
+<p>There is no formal secrets provisioning workflow. Secrets are provided either via:</p>
+<ol>
+<li><strong>Dockerfile ENV defaults</strong> — baked into the image at build time (insecure for production).</li>
+<li><strong>Runtime environment variable injection</strong> — the container runtime (Docker, Kubernetes, etc.) can override <code>DB_PASSWORD</code>, <code>DB_USER</code>, etc. at deployment time by passing environment variables to the container. No managed identity, Key Vault, Vault, or Secrets Manager integration exists.</li>
+</ol>
+<p>To harden the current approach, environment variables should be sourced from a secrets manager (e.g., Azure Key Vault, AWS Secrets Manager, Kubernetes Secrets) and the Dockerfile <code>ENV</code> defaults for credentials should be removed.</p>
+<h2 id="feature-flags">Feature Flags</h2>
+<p>No feature flags, conditional beans (<code>@ConditionalOnProperty</code>), LaunchDarkly, Unleash, or any feature toggle framework is present. All code paths are unconditionally active.</p>
+<div class="table-wrap"><table><thead><tr>
+<th>Flag Name</th><th>Default</th><th>Controlled By</th></tr></thead><tbody>
+<tr><td>(none)</td><td>N/A</td><td>N/A</td></tr>
+</tbody></table></div>
+<h2 id="framework-runtime-versions">Framework &amp; Runtime Versions</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Component</th><th>Version</th><th>Source</th></tr></thead><tbody>
+<tr><td>Java (source/target compatibility)</td><td>8 (Java SE 1.8)</td><td><code>build.gradle</code> (<code>sourceCompatibility</code>, <code>targetCompatibility</code>)</td></tr>
+<tr><td>Gradle (build image)</td><td>7.6</td><td><code>Dockerfile</code> (<code>FROM gradle:7.6-jdk8</code>)</td></tr>
+<tr><td>Servlet API</td><td>3.1.0</td><td><code>build.gradle</code> (<code>javax.servlet:javax.servlet-api:3.1.0</code>)</td></tr>
+<tr><td>Microsoft JDBC Driver for SQL Server</td><td>12.6.3.jre8</td><td><code>build.gradle</code></td></tr>
+<tr><td>org.json</td><td>20140107</td><td><code>build.gradle</code></td></tr>
+<tr><td>Tomcat (runtime)</td><td>9</td><td><code>Dockerfile</code> (<code>FROM tomcat:9-jdk8</code>)</td></tr>
+<tr><td>JDK (runtime image)</td><td>8</td><td><code>Dockerfile</code> (<code>tomcat:9-jdk8</code>)</td></tr>
+</tbody></table></div>
+</div>
+</div>
+<div id="tab-workflows" class="tab-panel">
+  <div class="fact-content"><h1 id="core-business-workflows">Core Business Workflows</h1>
+<p>ZavaInterestCalculator automates bank interest calculations and accruals for ZavaBank, enabling per-account interest computation (simple, compound, or amortized) and bulk accrual processing across all active customer accounts.</p>
+<h2 id="domain-entities">Domain Entities</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Entity</th><th>Service / Bounded Context</th><th>Description</th><th>Key Relationships</th></tr></thead><tbody>
+<tr><td>Account</td><td>Account Management (external)</td><td>A bank customer account holding a balance; has a status (Active/inactive) and an assigned account type</td><td>Belongs to one AccountType; has many InterestAccruals</td></tr>
+<tr><td>AccountType</td><td>Account Management (external)</td><td>Defines a category of bank account with an associated base interest rate</td><td>Referenced by many Accounts</td></tr>
+<tr><td>InterestAccrual</td><td>Interest Management (owned)</td><td>A historical record of interest calculated and applied to an account; captures the calculation parameters and resulting amount</td><td>Belongs to one Account</td></tr>
+</tbody></table></div>
+<h2 id="service-to-domain-mapping">Service-to-Domain Mapping</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Domain Context</th><th>Owned Entities</th><th>External Dependencies</th></tr></thead><tbody>
+<tr><td>ZavaInterestCalculator</td><td>Interest Management</td><td>InterestAccrual</td><td>Reads from and writes to Account (owned by external core banking system); reads AccountType for interest rate lookup</td></tr>
+</tbody></table></div>
+<p>ZavaInterestCalculator operates within the Interest Management bounded context. It reads accounts and account type rates from a shared database owned by an external core banking system, and writes accrual records back to that same database. There is no API or event-based integration with the owning system — data is accessed via direct SQL against the shared <code>ZavaBankDB</code> database.</p>
+<h2 id="primary-workflows">Primary Workflows</h2>
+<h3 id="workflow-1-calculate-interest-for-a-single-account">Workflow 1: Calculate Interest for a Single Account</h3>
+<p>Triggered by a client POST to <code>/api/interest/calculate</code> with an account ID and calculation parameters.</p>
+<p><strong>Steps:</strong></p>
+<ol>
+<li><strong>Parse and validate request</strong> — Extract <code>accountId</code> (required, must be &gt; 0), <code>interestType</code> (default: <code>simple</code>), <code>days</code> (default: 30), <code>annualRate</code> (optional override), <code>compoundsPerYear</code> (default: from config), <code>termMonths</code> (default: 12), <code>applyToBalance</code> (default: false).</li>
+<li><strong>Load account</strong> — Query the database for the account&#39;s current balance and account-type interest rate. Return 404 if not found.</li>
+<li><strong>Resolve annual rate</strong> — Use the rate from the request if provided; fall back to the account type&#39;s rate; if that is also zero, use the system default annual rate from configuration.</li>
+<li><strong>Calculate interest</strong> — Apply the selected formula (simple, compound, or amortized) to the principal balance for the given number of days.</li>
+<li><strong>Optionally persist accrual</strong> — If <code>applyToBalance</code> is <code>true</code>, update the account&#39;s balance and record a new <code>InterestAccrual</code> row in a single database transaction; if <code>false</code>, return the calculated amount without writing any changes.</li>
+<li><strong>Return result</strong> — Return a JSON response with the interest amount, balance before/after, and all calculation parameters.</li>
+</ol>
+<p><strong>Business rules involved:</strong> Interest type selection, rate resolution hierarchy, minimum field validation, optional accrual persistence.</p>
+<hr/>
+<h3 id="workflow-2-batch-accrue-interest-for-all-active-accounts">Workflow 2: Batch Accrue Interest for All Active Accounts</h3>
+<p>Triggered by a client POST to <code>/api/interest/accrue-all</code>, typically as a scheduled batch operation initiated by an external scheduler.</p>
+<p><strong>Steps:</strong></p>
+<ol>
+<li><strong>Parse parameters</strong> — Extract <code>interestType</code> (default: <code>simple</code>), <code>days</code>, <code>compoundsPerYear</code>, <code>termMonths</code> from the optional JSON body; all default to configured values if absent.</li>
+<li><strong>Load all active accounts</strong> — Query the database for all accounts with <code>Status = &#39;Active&#39;</code>, along with their account-type interest rates.</li>
+<li><strong>Begin database transaction</strong> — All updates are applied atomically.</li>
+<li><strong>Process each account</strong> — For each active account: resolve rate (use account type rate or fall back to system default if zero), calculate interest using the selected formula, update the account&#39;s balance, and insert an <code>InterestAccrual</code> record.</li>
+<li><strong>Commit or rollback</strong> — On success, commit the transaction and return totals; on any SQL error, roll back the entire batch.</li>
+<li><strong>Return batch summary</strong> — Return a JSON response with the count of accrued accounts and total interest applied.</li>
+</ol>
+<p><strong>Business rules involved:</strong> Only <code>Active</code> accounts are eligible for batch accrual; system default rate applies when no account-type rate is defined; all-or-nothing transaction semantics.</p>
+<hr/>
+<h3 id="workflow-3-application-startup-schema-bootstrap">Workflow 3: Application Startup — Schema Bootstrap</h3>
+<p>Triggered automatically by the Servlet container when the application starts (load-on-startup).</p>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Open a JDBC connection to the database.</li>
+<li>Execute conditional DDL: create the <code>InterestAccruals</code> table only if it does not already exist.</li>
+<li>Close the connection; if the database is unavailable, throw a <code>ServletException</code> to abort deployment.</li>
+</ol>
+<hr/>
+<h3 id="workflow-4-health-check">Workflow 4: Health Check</h3>
+<p>Triggered by a GET to <code>/health</code>. Returns a static HTML response confirming the application process is running. No database liveness check is performed.</p>
+<h2 id="cross-service-data-flows">Cross-Service Data Flows</h2>
+<p>ZavaInterestCalculator is a single-service application with no inter-service REST or messaging calls. The only data flows are between the application and SQL Server:</p>
+<ul>
+<li><strong>Inbound</strong>: The application reads <code>Accounts</code> and <code>AccountTypes</code> data from the shared database managed by an external core banking system. Account ownership is assumed to be managed externally.</li>
+<li><strong>Outbound</strong>: The application writes updated <code>Balance</code>, <code>AvailableBalance</code>, <code>InterestAccrued</code>, <code>LastActivityDate</code>, and <code>ModifiedDate</code> fields back to the <code>Accounts</code> table, and inserts new rows into <code>InterestAccruals</code>.</li>
+<li><strong>No fallback behavior</strong>: There is no circuit breaker, retry, or degraded mode. If the database is unavailable during a request, the operation returns HTTP 500.</li>
+</ul>
+<h2 id="business-workflow-sequence">Business Workflow Sequence</h2>
+<div class="mermaid">
+sequenceDiagram
+    participant Client as "API Client / Scheduler"
+    participant Svc as "ZavaInterestCalculator"
+    participant DB as "ZavaBankDB (SQL Server)"
+
+    Note over Client,Svc: Workflow 1: Calculate Interest (Single Account)
+    Client->>Svc: POST /api/interest/calculate {accountId, interestType, days, annualRate, applyToBalance}
+    alt Missing or invalid accountId
+        Svc-->>Client: 400 Bad Request
+    else Valid request
+        Svc->>DB: Load account balance and type rate
+        alt Account not found
+            DB-->>Svc: No row returned
+            Svc-->>Client: 404 Not Found
+        else Account found
+            DB-->>Svc: balance, accountTypeRate
+            Svc->>Svc: Resolve rate (request > account type > system default)
+            Svc->>Svc: Calculate interest (simple / compound / amortized)
+            alt applyToBalance = true
+                Svc->>DB: UPDATE Accounts balance + INSERT InterestAccrual (transaction)
+                DB-->>Svc: Commit OK
+            end
+            Svc-->>Client: 200 OK {interestAmount, balanceBefore, balanceAfter, applied}
+        end
+    end
+
+    Note over Client,Svc: Workflow 2: Batch Accrue All Active Accounts
+    Client->>Svc: POST /api/interest/accrue-all {interestType, days}
+    Svc->>DB: SELECT all Active accounts with type rates
+    DB-->>Svc: Account rows
+    loop For each active account
+        Svc->>Svc: Resolve rate; calculate interest
+        Svc->>DB: UPDATE Accounts + INSERT InterestAccrual
+    end
+    alt All updates succeed
+        Svc->>DB: COMMIT transaction
+        DB-->>Svc: OK
+        Svc-->>Client: 200 OK {accruedAccounts, totalInterest}
+    else SQL error on any account
+        Svc->>DB: ROLLBACK entire batch
+        Svc-->>Client: 500 Internal Server Error
+    end
+</div>
+<h2 id="business-rules-decision-logic">Business Rules &amp; Decision Logic</h2>
+<h3 id="validation-rules">Validation Rules</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Rule</th><th>Location</th><th>Behaviour</th></tr></thead><tbody>
+<tr><td><code>accountId</code> must be a positive integer</td><td>InterestCalculateServlet</td><td>Returns HTTP 400 if missing or &lt;= 0</td></tr>
+<tr><td><code>days</code> must be positive; defaults to 30</td><td>Both calculate and accrue-all Servlets</td><td>If &lt;= 0, reset to 30</td></tr>
+<tr><td><code>compoundsPerYear</code> must be positive; defaults to config value</td><td>Both Servlets</td><td>If &lt;= 0, reset to 12</td></tr>
+<tr><td><code>termMonths</code> must be positive; defaults to 12</td><td>Both Servlets</td><td>If &lt;= 0, reset to 12</td></tr>
+<tr><td><code>annualRate</code> must be positive; defaults to account type rate or system default</td><td>InterestCalculateServlet</td><td>If &lt;= 0, overridden with system default</td></tr>
+<tr><td><code>interestType</code> must be one of: simple, compound, amortized</td><td>Both Servlets</td><td>Any other value throws <code>IllegalArgumentException</code> → HTTP 400</td></tr>
+<tr><td><code>principal</code> must be &gt; 0 for interest to be calculated</td><td>Both Servlets</td><td>Returns zero interest without error if balance is zero or negative</td></tr>
+</tbody></table></div>
+<h3 id="decision-logic-rate-resolution">Decision Logic: Rate Resolution</h3>
+<pre><code>
+if (request provides annualRate &gt; 0)  → use request annualRate
+else if (account type rate &gt; 0)        → use account type rate
+else                                   → use system default (InterestConfig.getDefaultAnnualRate())
+</code></pre>
+<h3 id="interest-calculation-formulas">Interest Calculation Formulas</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Type</th><th>Formula</th></tr></thead><tbody>
+<tr><td>simple</td><td><code>principal &#215; annualRate &#215; days / 365</code></td></tr>
+<tr><td>compound</td><td><code>principal &#215; ((1 + annualRate/n)^(n &#215; days/365) − 1)</code> where n = compoundsPerYear</td></tr>
+<tr><td>amortized</td><td>Daily interest derived from standard amortization payment formula over termMonths</td></tr>
+</tbody></table></div>
+<h3 id="transaction-boundaries">Transaction Boundaries</h3>
+<ul>
+<li><strong>Single account accrual</strong> (<code>applyToBalance=true</code>): A manual JDBC transaction wraps the <code>UPDATE Accounts</code> and <code>INSERT InterestAccruals</code> pair. On failure, the transaction is rolled back.</li>
+<li><strong>Batch accrual</strong> (<code>/accrue-all</code>): A single JDBC transaction wraps all account updates and accrual inserts for the entire batch. Any single failure rolls back all changes for all accounts processed so far — all-or-nothing semantics.</li>
+</ul>
+<h3 id="error-handling">Error Handling</h3>
+<ul>
+<li>Invalid JSON payload or missing required fields → HTTP 400 with <code>{&quot;status&quot;:&quot;ERROR&quot;,&quot;message&quot;:&quot;...&quot;}</code>.</li>
+<li>Account not found → HTTP 404.</li>
+<li>SQL / database errors → HTTP 500; no compensating action or retry.</li>
+<li>Unsupported <code>interestType</code> value → <code>IllegalArgumentException</code> caught as HTTP 400.</li>
+</ul>
+<h3 id="authorization">Authorization</h3>
+<p>No authorization or authentication is enforced. All endpoints are publicly accessible without any role check or API key. The <code>/api/interest/accrue-all</code> endpoint in particular can mutate all active account balances without any access control.</p>
+<h3 id="audit-logging">Audit / Logging</h3>
+<p>The <code>InterestAccruals</code> table serves as an implicit audit trail: every applied accrual is recorded with account ID, interest type, principal, rate, days, amount, and timestamp. However, there is no application-level structured logging, correlation IDs, or change-data-capture mechanism.</p>
+</div>
+</div>
+<div id="tab-deps" class="tab-panel">
+  <div class="fact-content"><h1 id="dependency-map">Dependency Map</h1>
+<p>ZavaInterestCalculator declares 3 external dependencies in <code>build.gradle</code>: one provided Servlet API and two compile-time libraries for SQL Server JDBC connectivity and JSON handling.</p>
+<h2 id="dependencies">Dependencies</h2>
+<div class="mermaid">
+flowchart LR
+    App["ZavaInterestCalculator v1.0.0"]
+
+    subgraph Web["Web Frameworks"]
+        ServletAPI["javax.servlet-api 3.1.0 (provided)"]
+    end
+    subgraph DB["Database / ORM"]
+        MSSQLDriver["mssql-jdbc 12.6.3.jre8"]
+    end
+    subgraph Util["Utilities"]
+        OrgJson["org.json 20140107"]
+    end
+
+    App -->|"web"| Web
+    App -->|"persistence"| DB
+    App -->|"utilities"| Util
+</div>
+<h3 id="dependency-summary">Dependency Summary</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Category</th><th>Count</th><th>Key Libraries</th><th>Notes</th></tr></thead><tbody>
+<tr><td>Web Frameworks</td><td>1</td><td>javax.servlet-api 3.1.0</td><td>Provided scope — supplied by the Servlet container (e.g. Tomcat); targets the older javax.<em> namespace, not jakarta.</em></td></tr>
+<tr><td>Database / ORM</td><td>1</td><td>mssql-jdbc 12.6.3.jre8</td><td>Modern JDBC 4.2 driver for Microsoft SQL Server; JRE 8 variant</td></tr>
+<tr><td>Utilities</td><td>1</td><td>org.json 20140107</td><td>Minimal JSON library; very old release from 2014</td></tr>
+</tbody></table></div>
+<h3 id="version-compatibility-risks">Version &amp; Compatibility Risks</h3>
+<p>The <code>javax.servlet-api 3.1.0</code> dependency targets the legacy <code>javax.<em></code> namespace (Java EE 7 era). Modern Servlet containers such as Tomcat 10+ and WildFly 27+ have migrated to the <code>jakarta.</em></code> namespace (Jakarta EE 9+), meaning the application cannot run on those containers without code changes. The <code>org.json</code> artifact is pinned to a 2014 release (<code>20140107</code>) that predates many bug fixes and improvements; while it is functional for basic use, it is significantly outdated and the old date-based versioning scheme makes vulnerability tracking harder. The <code>mssql-jdbc 12.6.3.jre8</code> driver is a recent, actively maintained release and poses no immediate compatibility risk, though the JRE 8 variant should be updated to a JRE 11+ variant when the JDK is upgraded.</p>
+<h3 id="notable-observations">Notable Observations</h3>
+<ul>
+<li><strong>No logging framework declared</strong>: The application has no SLF4J, Log4j 2, or Logback dependency. Any logging relies on <code>System.out</code>/<code>System.err</code> or the Servlet container&#39;s built-in logger, which limits observability in cloud environments.</li>
+<li><strong>No dependency injection or web framework</strong>: The entire stack is built on raw Java EE Servlets without Spring Boot, Quarkus, or Micronaut — migrating to a modern framework would require significant restructuring.</li>
+<li><strong>org.json 20140107 is over 10 years old</strong>: This ancient version has no release metadata (no MANIFEST.MF version, no OSGi bundle version) making it difficult to track in software composition analysis (SCA) and security scanning tools. Upgrading to a recent release (e.g., 20240303) or switching to Jackson is recommended.</li>
+<li><strong>Minimal dependency footprint</strong>: With only 3 declared dependencies the application has a very small transitive closure, which simplifies containerization and migration but also means many cross-cutting concerns (security, observability, resilience) are entirely absent.</li>
+</ul>
+<h2 id="test-dependencies">Test Dependencies</h2>
+<p>No test-scoped dependencies detected.</p>
+<p>Total test-scope dependencies: 0</p>
+<p>No test framework (JUnit, TestNG, Mockito, etc.) is declared in <code>build.gradle</code>. The project has no automated test infrastructure, which is a risk factor for any modernization or migration effort since there are no regression tests to validate changes.</p>
+</div>
+</div>
+<div id="tab-data" class="tab-panel">
+  <div class="fact-content"><h1 id="data-architecture-persistence-layer">Data Architecture &amp; Persistence Layer</h1>
+<p>ZavaInterestCalculator uses a single Microsoft SQL Server database (<code>ZavaBankDB</code>) accessed via raw JDBC with no ORM framework; the data model consists of three core tables managed through a combination of a startup bootstrap Servlet and externally pre-existing schema.</p>
+<h2 id="database-configuration">Database Configuration</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service/Module</th><th>DB Type</th><th>Profile</th><th>Driver</th><th>Connection</th><th>Migration Tool</th></tr></thead><tbody>
+<tr><td>ZavaInterestCalculator</td><td>Microsoft SQL Server</td><td>All (single profile)</td><td>mssql-jdbc 12.6.3.jre8</td><td>Direct JDBC via <code>DriverManager.getConnection()</code>; no connection pool configured</td><td>None — schema DDL for <code>InterestAccruals</code> is executed programmatically by <code>InterestBootstrapServlet</code> at startup; <code>Accounts</code> and <code>AccountTypes</code> tables are assumed pre-existing</td></tr>
+</tbody></table></div>
+<p>Connection parameters (host, port, database name, username, password) are resolved at runtime from environment variables (<code>DB_HOST</code>, <code>DB_PORT</code>, <code>DB_NAME</code>, <code>DB_USER</code>, <code>DB_PASSWORD</code>) with a fallback to <code>interest.properties</code>. See <code>configuration-inventory.md</code> for the full property inventory.</p>
+<p>The <code>InterestAccruals</code> table is created with <code>IF OBJECT_ID(&#39;InterestAccruals&#39;, &#39;U&#39;) IS NULL CREATE TABLE ...</code> on every application startup, making <code>InterestBootstrapServlet</code> the sole schema migration mechanism. There are no Flyway, Liquibase, or other versioned migration scripts.</p>
+<h2 id="data-ownership-per-service">Data Ownership per Service</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Tables Owned</th><th>ORM Framework</th><th>Caching</th><th>Notes</th></tr></thead><tbody>
+<tr><td>ZavaInterestCalculator</td><td>InterestAccruals (write + read)</td><td>None — raw JDBC</td><td>None</td><td>Reads from Accounts and AccountTypes (assumed pre-existing, not owned by this service); manages only the InterestAccruals table lifecycle</td></tr>
+</tbody></table></div>
+<h2 id="entity-model">Entity Model</h2>
+<div class="mermaid">
+erDiagram
+    AccountTypes ||--o{ Accounts : "defines rate for"
+    Accounts ||--o{ InterestAccruals : "accrues"
+
+    AccountTypes {
+        int AccountTypeID PK
+        decimal InterestRate
+    }
+
+    Accounts {
+        int AccountID PK
+        int AccountTypeID FK
+        decimal Balance
+        decimal AvailableBalance
+        decimal InterestAccrued
+        string Status
+        datetime LastActivityDate
+        datetime ModifiedDate
+    }
+
+    InterestAccruals {
+        bigint AccrualID PK
+        int AccountID FK
+        string InterestType
+        decimal PrincipalAmount
+        decimal AnnualRate
+        int AccrualDays
+        decimal InterestAmount
+        datetime CreatedDate
+    }
+</div>
+<p>&gt; Note: <code>Accounts</code> and <code>AccountTypes</code> schema is inferred from SQL queries in the source code; no authoritative DDL script is present in the repository for these tables. Field list may be incomplete.</p>
+<h2 id="key-repository-methods">Key Repository Methods</h2>
+<p>There are no repository interfaces or ORM repositories. All data access is implemented inline within Servlet classes using raw JDBC <code>PreparedStatement</code> and <code>ResultSet</code>:</p>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Component</th><th>Notable SQL Operations</th><th>Purpose</th></tr></thead><tbody>
+<tr><td>ZavaInterestCalculator</td><td>InterestCalculateServlet</td><td><code>SELECT a.Balance, ISNULL(at.InterestRate, 0) FROM Accounts a LEFT JOIN AccountTypes at ON at.AccountTypeID = a.AccountTypeID WHERE a.AccountID = ?</code></td><td>Load a single account&#39;s balance and type-based interest rate</td></tr>
+<tr><td>ZavaInterestCalculator</td><td>InterestCalculateServlet</td><td><code>UPDATE Accounts SET Balance=?, AvailableBalance=?, InterestAccrued=ISNULL(InterestAccrued,0)+?, LastActivityDate=GETDATE(), ModifiedDate=GETDATE() WHERE AccountID=?</code></td><td>Apply calculated interest to a single account balance</td></tr>
+<tr><td>ZavaInterestCalculator</td><td>InterestCalculateServlet</td><td><code>INSERT INTO InterestAccruals (AccountID, InterestType, PrincipalAmount, AnnualRate, AccrualDays, InterestAmount, CreatedDate) VALUES (?,?,?,?,?,?,GETDATE())</code></td><td>Record individual accrual event</td></tr>
+<tr><td>ZavaInterestCalculator</td><td>InterestAccrueAllServlet</td><td><code>SELECT a.AccountID, a.Balance, ISNULL(at.InterestRate, 0) FROM Accounts a LEFT JOIN AccountTypes at ON at.AccountTypeID = a.AccountTypeID WHERE a.Status = &#39;Active&#39;</code></td><td>Batch-load all active accounts for bulk accrual</td></tr>
+<tr><td>ZavaInterestCalculator</td><td>InterestAccrueAllServlet</td><td>Batched <code>UPDATE Accounts</code> + <code>INSERT INTO InterestAccruals</code> (same as above, looped per account)</td><td>Bulk update balances and record accruals in a single transaction</td></tr>
+<tr><td>ZavaInterestCalculator</td><td>InterestBootstrapServlet</td><td><code>IF OBJECT_ID(&#39;InterestAccruals&#39;, &#39;U&#39;) IS NULL CREATE TABLE InterestAccruals (...)</code></td><td>Idempotent table creation on startup</td></tr>
+</tbody></table></div>
+<p>Transaction management is manual: <code>connection.setAutoCommit(false)</code> / <code>connection.commit()</code> / <code>connection.rollback()</code>. There are no <code>@Transactional</code> annotations or transaction management frameworks.</p>
+<h2 id="caching-strategy">Caching Strategy</h2>
+<p>No caching layer is implemented. Every request triggers a live JDBC query against SQL Server. Account data, type/rate lookups, and accrual records are fetched and written directly on each call with no in-memory cache, query result cache, or second-level cache.</p>
+<p>There is no Redis, EhCache, Caffeine, Spring Cache, or JCache (JSR-107) integration.</p>
+<h2 id="data-ownership-boundaries">Data Ownership Boundaries</h2>
+<p>ZavaInterestCalculator operates against a <strong>shared relational database</strong> (<code>ZavaBankDB</code>) that is assumed to be owned and populated by an external core banking system. The application has a narrow write scope:</p>
+<ul>
+<li><strong>Owns and manages</strong>: <code>InterestAccruals</code> table (created at startup, written by both calculate and accrue-all operations, not read externally by this service).</li>
+<li><strong>Reads but does not own</strong>: <code>Accounts</code> and <code>AccountTypes</code> tables — these are treated as pre-existing shared tables. The application reads balances and interest rates, and updates <code>Balance</code>, <code>AvailableBalance</code>, <code>InterestAccrued</code>, <code>LastActivityDate</code>, and <code>ModifiedDate</code> on <code>Accounts</code> rows, which represents cross-boundary write access to a table it does not own.</li>
+<li><strong>No database-per-service isolation</strong>: There is a single shared database with no logical schema separation between this service&#39;s domain and the broader banking schema.</li>
+<li><strong>No CQRS</strong>: All reads and writes use the same JDBC connection against the same tables.</li>
+</ul>
+<p>The <code>InterestAccrueAllServlet</code> performs a full-table scan of all active accounts in a single transaction, making it a heavyweight batch operation that could contend with other writers on the <code>Accounts</code> table.</p>
+<h3 id="data-classification-sensitivity">Data Classification &amp; Sensitivity</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Entity/Table</th><th>Sensitive Fields</th><th>Classification</th><th>Controls in Place</th></tr></thead><tbody>
+<tr><td>Accounts</td><td>Balance, AvailableBalance, InterestAccrued</td><td>Financial data (sensitive)</td><td>None — no encryption-at-rest, no field-level masking, no audit logging configured at the application level</td></tr>
+<tr><td>AccountTypes</td><td>InterestRate</td><td>Internal business data</td><td>None</td></tr>
+<tr><td>InterestAccruals</td><td>PrincipalAmount, AnnualRate, InterestAmount</td><td>Financial data (sensitive)</td><td>None — no encryption-at-rest, no masking</td></tr>
+</tbody></table></div>
+<p>Account holder PII (names, addresses, contact details) is not stored or accessed by this application. However, the <code>AccountID</code> integer key is a direct reference to customer accounts in the core banking database, and the financial balance and accrual data are sensitive financial records. No encryption-at-rest, data masking, column-level access controls, or application-level audit logging are configured.</p>
+</div>
+</div>
+<p class="footer">Your feedback is invaluable &mdash; <a href="https://aka.ms/ghcp-appmod/feedback">Share feedback</a></p>
+<script>
+function toggleRow(rowId, triggerRow) {
+  var detail = document.getElementById(rowId);
+  var btn = document.getElementById('btn-' + rowId);
+  if (!detail) return;
+  var visible = detail.style.display !== 'none';
+  detail.style.display = visible ? 'none' : 'table-row';
+  if (btn) btn.classList.toggle('open', !visible);
+}
+(function() {
+  var nav = document.querySelector('.tab-nav');
+  if (!nav) return;
+  nav.addEventListener('click', function(e) {
+    var btn = e.target.closest('.tab-btn');
+    if (!btn) return;
+    var targetId = btn.getAttribute('data-tab');
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+    btn.classList.add('active');
+    var panel = document.getElementById(targetId);
+    if (panel) {
+      panel.classList.add('active');
+      // Render any mermaid diagrams in this panel that haven't been processed yet
+      if (window.__mermaidReady) { window.__renderMermaidIn(panel); }
+    }
+  });
+})();
+
+// ── Diagram lightbox ────────────────────────────────────────
+(function() {
+  var lightbox = document.getElementById('diagram-lightbox');
+  var inner = document.getElementById('diagram-lightbox-inner');
+  var closeBtn = document.getElementById('diagram-lightbox-close');
+  if (!lightbox || !inner || !closeBtn) return;
+
+  var scale = 1;
+  var translateX = 0;
+  var translateY = 0;
+  var isDragging = false;
+  var dragStartX = 0;
+  var dragStartY = 0;
+
+  function applyTransform() {
+    var svg = inner.querySelector('svg');
+    if (svg) {
+      svg.style.transform = 'translate(' + translateX + 'px, ' + translateY + 'px) scale(' + scale + ')';
+      svg.style.transformOrigin = 'center center';
+      svg.style.transition = 'none';
+    }
+  }
+
+  function resetTransform() {
+    scale = 1; translateX = 0; translateY = 0;
+    applyTransform();
+  }
+
+  function openLightbox(svgEl) {
+    inner.innerHTML = svgEl.outerHTML;
+    var injected = inner.querySelector('svg');
+    if (injected) {
+      injected.removeAttribute('width');
+      injected.removeAttribute('height');
+      injected.style.cursor = 'grab';
+    }
+    resetTransform();
+    lightbox.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLightbox() {
+    lightbox.classList.remove('open');
+    inner.innerHTML = '';
+    document.body.style.overflow = '';
+    resetTransform();
+  }
+
+  inner.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    var delta = e.deltaY > 0 ? 0.9 : 1.1;
+    scale = Math.min(Math.max(scale * delta, 0.3), 8);
+    applyTransform();
+  }, { passive: false });
+
+  inner.addEventListener('mousedown', function(e) {
+    if (e.button !== 0) return;
+    isDragging = true;
+    dragStartX = e.clientX - translateX;
+    dragStartY = e.clientY - translateY;
+    var svg = inner.querySelector('svg');
+    if (svg) { svg.style.cursor = 'grabbing'; }
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (!isDragging) return;
+    translateX = e.clientX - dragStartX;
+    translateY = e.clientY - dragStartY;
+    applyTransform();
+  });
+
+  document.addEventListener('mouseup', function() {
+    if (!isDragging) return;
+    isDragging = false;
+    var svg = inner.querySelector('svg');
+    if (svg) { svg.style.cursor = 'grab'; }
+  });
+
+  inner.addEventListener('dblclick', function() { resetTransform(); });
+
+  document.addEventListener('click', function(e) {
+    var card = e.target.closest('.mermaid');
+    if (!card) return;
+    if (e.target.closest('.diagram-lightbox-close')) return;
+    var svg = card.querySelector('svg');
+    if (svg) { openLightbox(svg); }
+  });
+
+  closeBtn.addEventListener('click', closeLightbox);
+
+  lightbox.addEventListener('click', function(e) {
+    if (e.target === lightbox) { closeLightbox(); }
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') { closeLightbox(); }
+  });
+})();
+
+var _currentTarget = '';
+
+function toggleMultiSelect(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  // Close others
+  document.querySelectorAll('.multi-select.open').forEach(function(ms) { if (ms.id !== id) ms.classList.remove('open'); });
+  el.classList.toggle('open');
+}
+
+// Close dropdowns on outside click
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.multi-select')) {
+    document.querySelectorAll('.multi-select.open').forEach(function(ms) { ms.classList.remove('open'); });
+  }
+});
+
+function getMultiSelectValues(msId) {
+  var el = document.getElementById(msId);
+  if (!el) return [];
+  var checked = el.querySelectorAll('input[type=checkbox]:checked');
+  var vals = [];
+  for (var i = 0; i < checked.length; i++) vals.push(checked[i].value);
+  return vals;
+}
+
+function onMultiSelectChange(msId, label) {
+  var el = document.getElementById(msId);
+  if (!el) return;
+  var vals = getMultiSelectValues(msId);
+  var total = el.querySelectorAll('input[type=checkbox]').length;
+  var btn = el.querySelector('.multi-select-btn');
+  if (btn) {
+    btn.textContent = vals.length > 0 && vals.length < total ? label + ' (' + vals.length + ')' : label;
+  }
+  applyFilters();
+}
+
+function applyFilters() {
+  var selectedDomains = getMultiSelectValues('domain-ms');
+  var selectedCrits = getMultiSelectValues('criticality-ms');
+
+  // Domain filter: show/hide entire sections (empty = show all)
+  var sections = document.querySelectorAll('.issue-section');
+  for (var i = 0; i < sections.length; i++) {
+    var domain = sections[i].getAttribute('data-domain');
+    sections[i].style.display = (selectedDomains.length === 0 || selectedDomains.indexOf(domain) >= 0) ? '' : 'none';
+  }
+
+  // Row-level filtering: respect target + criticality
+  var rows = document.querySelectorAll('.issue-row');
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    var section = row.closest('.issue-section');
+    if (section && section.style.display === 'none') {
+      row.style.display = 'none';
+      var next = row.nextElementSibling;
+      if (next && next.classList.contains('detail-row')) next.style.display = 'none';
+      continue;
+    }
+
+    // Check target filter
+    var show = true;
+    if (_currentTarget && row.hasAttribute('data-targets')) {
+      var targetsStr = row.getAttribute('data-targets');
+      if (targetsStr && targetsStr !== '{}') {
+        try {
+          var targets = JSON.parse(targetsStr);
+          if (Object.keys(targets).length > 0 && !targets[_currentTarget]) {
+            show = false;
+          }
+        } catch(e) {}
+      }
+    }
+
+    // Check criticality filter
+    if (show && selectedCrits.length > 0) {
+      var crit = row.getAttribute('data-criticality');
+      if (selectedCrits.indexOf(crit) < 0) show = false;
+    }
+
+    row.style.display = show ? '' : 'none';
+    var nextRow = row.nextElementSibling;
+    if (nextRow && nextRow.classList.contains('detail-row')) {
+      if (!show) nextRow.style.display = 'none';
+    }
+  }
+}
+
+function clearAllFilters() {
+  document.querySelectorAll('.multi-select input[type=checkbox]').forEach(function(cb) { cb.checked = false; });
+  var domainBtn = document.querySelector('#domain-ms .multi-select-btn');
+  if (domainBtn) domainBtn.textContent = 'Domain';
+  var critBtn = document.querySelector('#criticality-ms .multi-select-btn');
+  if (critBtn) critBtn.textContent = 'Criticality';
+  applyFilters();
+}
+
+function onTargetChange(targetId) {
+  _currentTarget = targetId;
+  var rows = document.querySelectorAll('.issue-row[data-targets]');
+  var totalEffort = 0;
+  var domainCrits = {}; // domain -> {mandatory:0, potential:0, optional:0}
+
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    var targets = JSON.parse(row.getAttribute('data-targets'));
+    var section = row.closest('.issue-section');
+    var domain = section ? section.getAttribute('data-domain') : '';
+
+    if (!targets || Object.keys(targets).length === 0) {
+      // No target data (e.g. security) — always show
+      var sp = parseFloat(row.querySelector('.sp-cell').textContent) || 0;
+      totalEffort += sp;
+      if (!domainCrits[domain]) domainCrits[domain] = {mandatory:0,potential:0,optional:0};
+      var crit = row.getAttribute('data-criticality') || 'optional';
+      domainCrits[domain][crit] = (domainCrits[domain][crit] || 0) + 1;
+      continue;
+    }
+
+    var override = targets[targetId];
+    if (!override) {
+      // Issue doesn't apply to this target
+      continue;
+    }
+
+    // Apply severity override
+    var newSeverity = (override.severity || row.getAttribute('data-default-severity') || '').toLowerCase();
+    row.setAttribute('data-criticality', newSeverity);
+    var critCell = row.querySelector('.crit-cell');
+    if (critCell) {
+      var critText = newSeverity === 'mandatory' ? 'Mandatory' : newSeverity === 'potential' ? 'Potential' : 'Optional';
+      var cssClass = newSeverity === 'mandatory' ? 'crit-square-mandatory' : newSeverity === 'potential' ? 'crit-square-potential' : 'crit-square-optional';
+      critCell.innerHTML = '<span class="crit-label"><span class="crit-square ' + cssClass + '"></span>' + critText + '</span>';
+    }
+
+    // Apply effort override
+    var newEffort = override.effort !== undefined ? override.effort : parseFloat(row.getAttribute('data-default-effort')) || 0;
+    var spCell = row.querySelector('.sp-cell');
+    if (spCell) spCell.textContent = newEffort;
+    totalEffort += newEffort;
+
+    if (!domainCrits[domain]) domainCrits[domain] = {mandatory:0,potential:0,optional:0};
+    domainCrits[domain][newSeverity] = (domainCrits[domain][newSeverity] || 0) + 1;
+  }
+
+  // Also add security findings effort (they don't have per-target data)
+  var secSection = document.querySelector('.issue-section[data-domain="security"]');
+  if (secSection) {
+    var secRows = secSection.querySelectorAll('.issue-row');
+    for (var j = 0; j < secRows.length; j++) {
+      if (!secRows[j].hasAttribute('data-targets') || secRows[j].getAttribute('data-targets') === '') {
+        var sp = parseFloat(secRows[j].querySelector('.sp-cell').textContent) || 0;
+        totalEffort += sp;
+        if (!domainCrits['security']) domainCrits['security'] = {mandatory:0,potential:0,optional:0};
+        var sc = secRows[j].getAttribute('data-criticality') || 'optional';
+        domainCrits['security'][sc] = (domainCrits['security'][sc] || 0) + 1;
+      }
+    }
+  }
+
+  // Update effort display
+  var label = totalEffort < 20 ? 'S' : totalEffort < 50 ? 'M' : totalEffort < 100 ? 'L' : 'XL';
+  var effortEl = document.getElementById('effort-display');
+  if (effortEl) effortEl.textContent = label + ' (total story points: ' + totalEffort + ')';
+
+  // Update donut charts
+  updateDonuts(domainCrits);
+
+  // Re-apply domain/criticality filters
+  applyFilters();
+}
+
+function updateDonuts(domainCrits) {
+  var container = document.getElementById('donut-container');
+  if (!container) return;
+  container.innerHTML = '';
+  var domainNames = {'cloud-readiness':'Cloud Readiness','java-upgrade':'Java Upgrade','dotnet-upgrade':'DotNET Upgrade','security':'Security'};
+  var domainOrder = ['cloud-readiness','java-upgrade','dotnet-upgrade','security'];
+  for (var d = 0; d < domainOrder.length; d++) {
+    var key = domainOrder[d];
+    var c = domainCrits[key];
+    if (!c || (c.mandatory + c.potential + c.optional) === 0) continue;
+    var total = c.mandatory + c.potential + c.optional;
+    var div = document.createElement('div');
+    div.className = 'domain-summary-item';
+    div.innerHTML = buildDonutSvg(c.mandatory, c.potential, c.optional) +
+      '<h3>' + domainNames[key] + '</h3>' +
+      '<div class="count">' + total + ' issue' + (total !== 1 ? 's' : '') + '</div>';
+    container.appendChild(div);
+  }
+}
+
+function buildDonutSvg(m, p, o) {
+  var total = m + p + o;
+  if (total === 0) return '<svg viewBox="0 0 100 100" width="100" height="100" style="display:block;margin:0 auto;"><circle cx="50" cy="50" r="35" fill="none" stroke="#d0d7de" stroke-width="15" opacity="0.5"/></svg>';
+  var r = 35, circ = 2 * Math.PI * r, offset = 0;
+  var svg = '<svg viewBox="0 0 100 100" width="100" height="100" style="display:block;margin:0 auto;transform:rotate(-90deg);">';
+  var segs = [{c:m,color:'var(--color-mandatory)'},{c:p,color:'var(--color-potential)'},{c:o,color:'var(--color-optional)'}];
+  for (var i = 0; i < segs.length; i++) {
+    if (segs[i].c === 0) continue;
+    var segLen = (segs[i].c / total) * circ;
+    var gap = total > segs[i].c ? 1.5 : 0;
+    var drawLen = Math.max(segLen - gap, 0.5);
+    svg += '<circle cx="50" cy="50" r="' + r + '" fill="none" stroke="' + segs[i].color + '" stroke-width="15" stroke-dasharray="' + drawLen.toFixed(2) + ' ' + circ.toFixed(2) + '" stroke-dashoffset="' + (-offset).toFixed(2) + '"/>';
+    offset += segLen;
+  }
+  svg += '</svg>';
+  return svg;
+}
+</script>
+<script>document.addEventListener('DOMContentLoaded', function() { onTargetChange('azure-aks'); });</script>
+</div></body></html>
