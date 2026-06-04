@@ -1,0 +1,7 @@
+{
+  "name": "Rewrite payment gateway to SpringBoot execution",
+  "execution_mode": "cca",
+  "status": "pending",
+  "base_commit": "e7d2eea48f0d143435f2bb3cfeb69a6e67616bbe",
+  "started_at": "2026-06-04T03:55:31.9124401\u002B00:00"
+}
